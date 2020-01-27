@@ -10,5 +10,6 @@ edition = "2018"
 # TODO: we should just track "^3" (not available atm for some reason)
 clap = { git = "https://github.com/clap-rs/clap", branch = "master" }
 failure = "^0"
+magic-crypt = "^2"
 serde = "1.0"
 serde_yaml = "0.8"

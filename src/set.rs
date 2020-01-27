@@ -10,6 +10,7 @@ pub struct Set {
 
 impl Set {
     pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
-        ::hips::YAMLStore::new(store, pw).set(self.key, self.value)
+        let mut store = ::hips::YAMLStore::<::hips::MagicEncrypter>::new(store, pw);
+        store.set(self.key, self.value)
     }
 }

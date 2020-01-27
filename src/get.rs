@@ -9,7 +9,8 @@ pub struct Get {
 
 impl Get {
     pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
-        writeln!(::std::io::stdout(), "{}", ::hips::YAMLStore::new(store, pw).get(self.key)?);
+        let mut store = ::hips::YAMLStore::<::hips::MagicEncrypter>::new(store, pw);
+        writeln!(::std::io::stdout(), "{}", store.get(self.key)?);
         Ok(())
     }
 }
