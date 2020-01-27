@@ -1,6 +1,17 @@
 #[macro_use]
 extern crate clap;
 
+fn main() -> Result<(), ::failure::Error> {
+    let opts = Options::parse();
+
+    match opts.subcmd {
+        Command::Env(env) => env.run(opts.store, opts.password),
+        Command::Set(set) => set.run(opts.store, opts.password),
+        Command::Get(get) => get.run(opts.store, opts.password),
+        _ => panic!("please provide a command"),
+    }
+}
+
 #[derive(Clap, Debug)]
 #[clap(version = "0.0.1", author = "Louis Feuvrier, mqnfred@gmail.com")]
 struct Options {
@@ -26,14 +37,3 @@ enum Command {
 mod env;
 mod get;
 mod set;
-
-fn main() -> Result<(), ::failure::Error> {
-    let opts = Options::parse();
-
-    match opts.subcmd {
-        Command::Env(env) => env.run(opts.store, opts.password),
-        Command::Set(set) => set.run(opts.store, opts.password),
-        Command::Get(get) => get.run(opts.store, opts.password),
-        _ => panic!("please provide a command"),
-    }
-}
