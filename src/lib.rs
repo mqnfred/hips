@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate magic_crypt;
-
 use ::std::collections::BTreeMap;
 use ::std::io::Write;
 
@@ -107,7 +104,7 @@ mod encrypters {
         }
 
         fn decrypt(&mut self, value: &str) -> Result<String, ::failure::Error> {
-            Ok(self.0.decrypt_base64_to_string(value).map_err(|err| {
+            Ok(self.0.decrypt_base64_to_string(value).map_err(|_| {
                 ::failure::err_msg("failed_to_decrypt")
             })?)
         }

@@ -7,7 +7,6 @@ fn main() -> Result<(), ::failure::Error> {
         Command::Env(env) => env.run(opts.store, opts.password),
         Command::Set(set) => set.run(opts.store, opts.password),
         Command::Get(get) => get.run(opts.store, opts.password),
-        _ => panic!("please provide a command"),
     }
 }
 
@@ -51,7 +50,7 @@ mod commands {
             }).collect::<Vec<String>>();
 
             if let Some(interpreter) = self.interpreter {
-                writeln!(::std::io::stdout(), "#!{}\n", interpreter);
+                writeln!(::std::io::stdout(), "#!{}\n", interpreter)?;
             }
             Ok(writeln!(::std::io::stdout(), "{}", assignments.join("\n"))?)
         }
@@ -65,8 +64,7 @@ mod commands {
     impl Get {
         pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
             let mut db = ::hips::EncryptedYaml::new(store, pw);
-            writeln!(::std::io::stdout(), "{}", db.get(self.key)?);
-            Ok(())
+            Ok(writeln!(::std::io::stdout(), "{}", db.get(self.key)?)?)
         }
     }
 
