@@ -45,7 +45,7 @@ mod commands {
     }
     impl Env {
         pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
-            let mut db = ::hips::DefaultDatabase::new(store, pw);
+            let mut db = ::hips::EncryptedYaml::new(store, pw);
             let assignments = db.all()?.into_iter().map(|(k, v)| {
                 format!("export {} = '{}';", k.to_uppercase(), v)
             }).collect::<Vec<String>>();
@@ -64,7 +64,7 @@ mod commands {
     }
     impl Get {
         pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
-            let mut db = ::hips::DefaultDatabase::new(store, pw);
+            let mut db = ::hips::EncryptedYaml::new(store, pw);
             writeln!(::std::io::stdout(), "{}", db.get(self.key)?);
             Ok(())
         }
@@ -79,7 +79,7 @@ mod commands {
     }
     impl Set {
         pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
-            let mut db = ::hips::DefaultDatabase::new(store, pw);
+            let mut db = ::hips::EncryptedYaml::new(store, pw);
             db.set(self.key, self.value)
         }
     }

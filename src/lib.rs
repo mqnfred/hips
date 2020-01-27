@@ -4,20 +4,20 @@ extern crate magic_crypt;
 use ::std::collections::BTreeMap;
 use ::std::io::Write;
 
-pub struct Database<S: Store, E: Encrypter> {
+pub type EncryptedYaml = EncryptedStore<stores::YAML, encrypters::Magic>;
+
+pub struct EncryptedStore<S: Store, E: Encrypter> {
     s: S,
     e: E,
 }
 
-pub type DefaultDatabase = Database<stores::YAML, encrypters::Magic>;
-
-impl Database<stores::YAML, encrypters::Magic> {
+impl EncryptedStore<stores::YAML, encrypters::Magic> {
     pub fn new(path: String, password: String) -> Self {
         Self{ s: stores::YAML::new(path), e: encrypters::Magic::new(password) }
     }
 }
 
-impl<S: Store, E: Encrypter> Store for Database<S, E> {
+impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
     fn set(&mut self, key: String, value: String) -> Result<(), ::failure::Error> {
         self.s.set(key, self.e.encrypt(&value)?)
     }
