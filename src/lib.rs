@@ -20,13 +20,11 @@ mod stores {
     use super::*;
 
     pub struct EncryptedStore<S: Store, E: Encrypter>(S, E);
-
     impl EncryptedStore<YAML, encrypters::Magic> {
         pub fn new(path: String, password: String) -> Self {
             Self(YAML::new(path), encrypters::Magic::new(password))
         }
     }
-
     impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
         fn set(&mut self, key: String, value: String) -> Result<(), Error> {
             self.0.set(key, self.1.encrypt(&value)?)
@@ -48,25 +46,6 @@ mod stores {
     pub struct YAML {
         path: String,
     }
-
-    impl Store for YAML {
-        fn set(&mut self, key: String, value: String) -> Result<(), Error> {
-            let mut map = self.read()?;
-            map.insert(key, value);
-            self.write(map)
-        }
-
-        fn get(&mut self, key: String) -> Result<String, Error> {
-            self.read()?.get(&key).map(|f| {
-                Ok(f.to_owned())
-            }).unwrap_or_else(|| Err(::failure::err_msg("key not found")))
-        }
-
-        fn all(&mut self) -> Result<BTreeMap<String, String>, Error> {
-            self.read()
-        }
-    }
-
     impl YAML {
         pub fn new(path: String) -> Self {
             Self { path }
@@ -85,13 +64,29 @@ mod stores {
             Ok(f.write_all(::serde_yaml::to_string(&map)?.as_bytes())?)
         }
     }
+    impl Store for YAML {
+        fn set(&mut self, key: String, value: String) -> Result<(), Error> {
+            let mut map = self.read()?;
+            map.insert(key, value);
+            self.write(map)
+        }
+
+        fn get(&mut self, key: String) -> Result<String, Error> {
+            self.read()?.get(&key).map(|f| {
+                Ok(f.to_owned())
+            }).unwrap_or_else(|| Err(::failure::err_msg("key not found")))
+        }
+
+        fn all(&mut self) -> Result<BTreeMap<String, String>, Error> {
+            self.read()
+        }
+    }
 }
 
 mod encrypters {
     use super::*;
 
     pub struct Magic(::magic_crypt::MagicCrypt);
-
     impl Encrypter for Magic {
         fn new(key: String) -> Self {
             Self(::magic_crypt::new_magic_crypt!(&key, 256))
