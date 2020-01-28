@@ -110,7 +110,7 @@ mod commands {
     impl Env {
         pub fn run<B: Backend, E: Encrypter>(self, mut db: Database<B, E>) -> Result<(), Error> {
             let assignments = db.all().context("listing secrets")?.into_iter().map(|s| {
-                format!("export {} = '{}';", s.name.to_uppercase(), s.secret)
+                format!("export {}='{}';", s.name.to_uppercase(), s.secret)
             }).collect::<Vec<String>>();
 
             if let Some(shell) = self.shell {

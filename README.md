@@ -33,7 +33,9 @@ Let's look at what a typical secret management session might look like:
 $ echo my-master-pw | hips -d secrets.yaml set my_secret 'what-i-want-to-hide'
 $ cat secrets.yaml
 ---
-4xSt9Vm+tsn7rj71WQ+y+NoAeD+TIfdbd71qNTwK+uVIOzo0jmdP1vwrbpyICE6vJdiPJdQhpZHAs49SZAElOsddu8Wr: jMdEH5ldRIwmqWMoIJ2pfhGy3SDP1W6NwYTXcMn7WypLUZV8kHQ+fuosyfRpaScv5V/L//AsXBDHHP0grHI6iIUDZb1obj1as272sV9Yyg==
+- name: my_secret
+  secret: Laa9zkx4miBxwYI4DXHtZnbJkKjHk79goacgnZdlBObgu83zvlPuHPOYlQP34NE=
+  salt: onr7n6KPvITeTWtbeKzgzKORC4yuTtrIZeG5mU53FZk=
 
 $ echo my-master-pw | hips -d secrets.yaml get my_secret
 what-i-want-to-hide
