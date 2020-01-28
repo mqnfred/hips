@@ -26,18 +26,27 @@ mod stores {
         }
     }
     impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
-        fn set(&mut self, key: String, value: String) -> Result<(), Error> {
-            self.0.set(key, self.1.encrypt(&value).context("encrypting secret")?)
+        fn set(&mut self, name: String, value: String) -> Result<(), Error> {
+            self.0.set(
+                self.1.encrypt(&name).context("encrypting name")?,
+                self.1.encrypt(&value).context("encrypting secret")?,
+            )
         }
 
-        fn get(&mut self, key: String) -> Result<String, Error> {
-            self.1.decrypt(&self.0.get(key)?).context("decrypting secret")
+        fn get(&mut self, name: String) -> Result<String, Error> {
+            let encrypted_name = self.1.encrypt(&name).context("encrypting name")?;
+            self.1.decrypt(
+                &self.0.get(encrypted_name).context("looking up name")?
+            ).context("decrypting secret")
         }
 
         fn all(&mut self) -> Result<BTreeMap<String, String>, Error> {
             let mut map = BTreeMap::<String, String>::new();
             for (k, v) in self.0.all().context("listing secrets")? {
-                map.insert(k, self.1.decrypt(&v).context("decrypting secret")?);
+                map.insert(
+                    self.1.decrypt(&k).context("decrypting name")?,
+                    self.1.decrypt(&v).context("decrypting secret")?,
+                );
             }
             Ok(map)
         }
@@ -90,6 +99,7 @@ mod encrypters {
     use super::*;
 
     const IV_SIZE: usize = 12;
+    const SALT_SIZE: usize = 32;
     const TAG_SIZE: usize = 16;
     const KEY_LEN: usize = 32;
     const ITERATIONS: usize = 100_000;
@@ -97,11 +107,11 @@ mod encrypters {
         password: String,
     }
     impl OpenSSL {
-        fn key(&self) -> Result<Vec<u8>, Error> {
+        fn key(&self, salt: &[u8]) -> Result<Vec<u8>, Error> {
             let mut pbkdf2_hash = [0u8; KEY_LEN];
             ::openssl::pkcs5::pbkdf2_hmac(
                 self.password.as_bytes(),
-                b"tacos hhhhhhhmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+                &salt,
                 ITERATIONS,
                 ::openssl::hash::MessageDigest::sha256(),
                 &mut pbkdf2_hash,
@@ -114,32 +124,35 @@ mod encrypters {
             Self { password }
         }
 
-        fn encrypt(&mut self, value: &str) -> Result<String, Error> {
-            let mut iv = vec![0; IV_SIZE];
+        fn encrypt(&mut self, to_encrypt: &str) -> Result<String, Error> {
+            let mut iv = vec![0u8; IV_SIZE];
             ::openssl::rand::rand_bytes(&mut iv).context("generating random bytes")?;
-            let mut tag = vec![0; TAG_SIZE];
+            let mut salt = vec![0u8; SALT_SIZE];
+            ::openssl::rand::rand_bytes(&mut salt).context("generating random bytes")?;
+            let mut tag = vec![0u8; TAG_SIZE];
 
             let cipher = ::openssl::symm::Cipher::aes_256_gcm();
             let ciphertext = ::openssl::symm::encrypt_aead(
-                cipher, &self.key().context("generating key")?,
-                Some(&iv), &[], value.as_bytes(), &mut tag,
+                cipher, &self.key(&salt).context("generating key")?,
+                Some(&iv), &[], to_encrypt.as_bytes(), &mut tag,
             ).context("encrypting plaintext")?;
 
             Ok(::base64::encode(
                 &iv.into_iter().chain(
-                    tag.into_iter()
+                    salt.into_iter().chain(tag.into_iter())
                 ).chain(ciphertext.into_iter()).collect::<Vec<u8>>()
             ))
         }
 
-        fn decrypt(&mut self, value: &str) -> Result<String, Error> {
-            let value = ::base64::decode(value).context("decoding base64")?;
-            let iv = &value[..IV_SIZE];
-            let tag = &value[IV_SIZE..(IV_SIZE + TAG_SIZE)];
-            let ciphertext = &value[(IV_SIZE + TAG_SIZE)..];
+        fn decrypt(&mut self, to_decrypt: &str) -> Result<String, Error> {
+            let to_decrypt = ::base64::decode(to_decrypt).context("decoding base64")?;
+            let iv = &to_decrypt[..IV_SIZE];
+            let salt = &to_decrypt[IV_SIZE..(IV_SIZE + SALT_SIZE)];
+            let tag = &to_decrypt[(IV_SIZE + SALT_SIZE)..(IV_SIZE + SALT_SIZE + TAG_SIZE)];
+            let ciphertext = &to_decrypt[(IV_SIZE + SALT_SIZE + TAG_SIZE)..];
             Ok(::std::str::from_utf8(&::openssl::symm::decrypt_aead(
                 ::openssl::symm::Cipher::aes_256_gcm(),
-                &self.key().context("generating key")?,
+                &self.key(salt).context("generating key")?,
                 Some(&iv), &[], &ciphertext, &tag,
             ).context("processing ciphertext")?).context("loading string as utf8")?.into())
         }
