@@ -1,15 +1,15 @@
 #[macro_use]
 extern crate clap;
 
-use ::failure::Error;
+use ::anyhow::{Context,Error};
 use ::std::io::{Read,Write};
 
 fn main() -> Result<(), Error> {
     if let Err(err) = run() {
-        Ok(writeln!(::std::io::stderr(), "{}", err)?)
-    } else {
-        Ok(())
+        writeln!(::std::io::stderr(), "error: {:#}", err).context("error while printing error")?;
+        ::std::process::exit(1);
     }
+    Ok(())
 }
 
 fn run() -> Result<(), Error> {
@@ -20,9 +20,9 @@ fn run() -> Result<(), Error> {
     let db = ::hips::EncryptedYaml::new(opts.database, master);
 
     match opts.subcmd {
-        Command::Env(env) => env.run(db),
-        Command::Set(set) => set.run(db),
         Command::Get(get) => get.run(db),
+        Command::Set(set) => set.run(db),
+        Command::Env(env) => env.run(db),
     }
 }
 
@@ -38,12 +38,12 @@ struct Options {
 
 #[derive(Clap, Debug)]
 enum Command {
-    #[clap(name = "env", about = "Output a shell script which loads all keys as environment")]
-    Env(commands::Env),
-    #[clap(name = "get", about = "Get the value for a given key")]
+    #[clap(name = "get", about = "Get the value for a given secret name")]
     Get(commands::Get),
-    #[clap(name = "set", about = "Set a key to a given value")]
+    #[clap(name = "set", about = "Set a secret to a given value")]
     Set(commands::Set),
+    #[clap(name = "env", about = "Output scripts which load all secrets as environment variables")]
+    Env(commands::Env),
 }
 
 
@@ -52,31 +52,16 @@ mod commands {
     use super::*;
 
     #[derive(Clap, Debug)]
-    pub struct Env {
-        #[clap(short = "i", long = "interpreter")]
-        interpreter: Option<String>,
-    }
-    impl Env {
-        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
-            let assignments = store.all()?.into_iter().map(|(k, v)| {
-                format!("export {} = '{}';", k.to_uppercase(), v)
-            }).collect::<Vec<String>>();
-
-            if let Some(interpreter) = self.interpreter {
-                writeln!(::std::io::stdout(), "#!{}\n", interpreter)?;
-            }
-            Ok(writeln!(::std::io::stdout(), "{}", assignments.join("\n"))?)
-        }
-    }
-
-    #[derive(Clap, Debug)]
     pub struct Get {
-        #[clap(name = "key")]
-        key: String,
+        #[clap(name = "name")]
+        name: String,
     }
     impl Get {
         pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
-            Ok(writeln!(::std::io::stdout(), "{}", store.get(self.key)?)?)
+            Ok(writeln!(
+                ::std::io::stdout(), "{}",
+                store.get(self.name).context("retrieving secret")?,
+            ).context("writing secret to stdout")?)
         }
     }
 
@@ -89,7 +74,31 @@ mod commands {
     }
     impl Set {
         pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
-            store.set(self.key, self.value)
+            store.set(self.key, self.value).context("writing secret to database") 
+        }
+    }
+
+    #[derive(Clap, Debug)]
+    pub struct Env {
+        #[clap(short = "i", long = "interpreter")]
+        interpreter: Option<String>,
+    }
+    impl Env {
+        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
+            let assignments = store.all().context("listing secrets")?.into_iter().map(|(k, v)| {
+                format!("export {} = '{}';", k.to_uppercase(), v)
+            }).collect::<Vec<String>>();
+
+            if let Some(interpreter) = self.interpreter {
+                writeln!(
+                    ::std::io::stdout(),
+                    "#!{}\n", interpreter,
+                ).context("writing shebang to stdout")?;
+            }
+            Ok(writeln!(
+                ::std::io::stdout(),
+                "{}", assignments.join("\n")
+            ).context("writing assignments to stdin")?)
         }
     }
 }
