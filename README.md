@@ -5,7 +5,7 @@ alongside their code.
 
 While it is beneficial to treat secrets like code, it is not advisable to store
 them alongside it in a plain text fashion. `hips` is a small utility meant to
-manage a yaml file containing **encrypted** secrets.
+manage files containing **encrypted** secrets.
 
 ## Why? me+code=secrets
 

@@ -5,6 +5,7 @@ extern crate serde;
 
 use ::anyhow::{Context,Error};
 use ::std::io::Write;
+use ::std::path::PathBuf;
 
 pub struct Secret {
     pub name: String,
@@ -18,16 +19,30 @@ pub struct Encrypted {
     salt: String,
 }
 
-pub struct Database<B: Backend, E: Encrypter> {
-    b: B,
-    e: E,
+pub struct Database {
+    b: Box<dyn Backend>,
+    e: Box<dyn Encrypter>,
 }
-impl Database<backends::YAML, encrypters::OpenSSL> {
-    pub fn new(path: String, password: String) -> Self {
-        Self { b: backends::YAML::new(path), e: encrypters::OpenSSL::new(password) }
+impl Database {
+    pub fn new(path: PathBuf, password: String) -> Result<Self, Error> {
+        if let Some(extension) = path.extension() {
+            if extension == "yaml" {
+                Ok(Database{
+                    b: Box::new(backends::YAML::new(path)),
+                    e: Box::new(encrypters::OpenSSL::new(password)),
+                })
+            } else {
+                Err(Error::msg(format!("unsupported format: {}", extension.to_str().unwrap())))
+            }
+        } else {
+            Ok(Database{
+                b: Box::new(backends::Folder::new(path)),
+                e: Box::new(encrypters::OpenSSL::new(password)),
+            })
+        }
     }
 }
-impl<B: Backend, E: Encrypter> Database<B, E> {
+impl Database {
     pub fn set(&mut self, secret: Secret) -> Result<(), Error> {
         let encrypted = self.e.encrypt(secret).context("encrypting secret")?;
         self.b.set(encrypted).context("storing secret")
@@ -51,15 +66,14 @@ pub trait Backend {
     fn get(&mut self, name: String) -> Result<Encrypted, Error>;
     fn all(&mut self) -> Result<Vec<Encrypted>, Error>;
 }
-pub use backends::YAML;
 mod backends {
     use super::*;
 
     pub struct YAML {
-        path: String,
+        path: PathBuf,
     }
     impl YAML {
-        pub fn new(path: String) -> Self {
+        pub fn new(path: PathBuf) -> Self {
             Self { path }
         }
 
@@ -101,14 +115,78 @@ mod backends {
             self.read()
         }
     }
+
+    pub struct Folder {
+        path: PathBuf,
+    }
+    impl Folder {
+        pub fn new(path: PathBuf) -> Self {
+            Self { path }
+        }
+
+        fn ensure_root(&self, name: &str) -> Result<PathBuf, Error> {
+            let root_path = self.path.join(name);
+            let root_md = match ::std::fs::metadata(&root_path) {
+                Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => {
+                    ::std::fs::create_dir_all(&root_path)?;
+                    ::std::fs::metadata(&root_path)?
+                }
+                Err(err) => return Err(err.into()),
+                Ok(md) => md,
+            };
+
+            if root_path.is_dir() {
+                Ok(root_path)
+            } else {
+                Err(Error::msg("secret path is invalid (should be a directory)"))
+            }
+        }
+
+        fn salt_path(&self, name: &str) -> PathBuf {
+            self.path.join(name).join("salt")
+        }
+
+        fn secret_path(&self, name: &str) -> PathBuf {
+            self.path.join(name).join("secret")
+        }
+    }
+    impl Backend for Folder {
+        fn set(&mut self, encrypted: Encrypted) -> Result<(), Error> {
+            self.ensure_root(&encrypted.name)?;
+
+            let mut salt_f = ::std::fs::OpenOptions::new().write(true).create(true)
+                .truncate(true).open(self.salt_path(&encrypted.name)).context("opening file")?;
+            salt_f.write_all(encrypted.salt.as_bytes())?;
+
+            let mut secret_f = ::std::fs::OpenOptions::new().write(true).create(true)
+                .truncate(true).open(self.secret_path(&encrypted.name)).context("opening file")?;
+            Ok(secret_f.write_all(encrypted.secret.as_bytes())?)
+        }
+
+        fn get(&mut self, name: String) -> Result<Encrypted, Error> {
+            let salt_path = self.salt_path(&name);
+            let secret_path = self.secret_path(&name);
+            Ok(Encrypted{
+                name,
+                secret: ::std::fs::read_to_string(secret_path).context("reading secret file")?,
+                salt: ::std::fs::read_to_string(salt_path).context("reading salt file")?,
+            })
+        }
+
+        fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
+            ::std::fs::read_dir(&self.path).context(
+                "listing secret files"
+            )?.collect::<Result<Vec<_>, _>>()?.into_iter().filter_map(|dir| {
+                dir.path().file_name().map(|fname| self.get(fname.to_str().unwrap().to_owned()))
+            }).collect::<Result<Vec<_>, _>>()
+        }
+    }
 }
 
 pub trait Encrypter {
-    fn new(password: String) -> Self;
     fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error>;
     fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret, Error>;
 }
-pub use encrypters::OpenSSL;
 mod encrypters {
     use super::*;
 
@@ -121,6 +199,10 @@ mod encrypters {
         password: String,
     }
     impl OpenSSL {
+        pub fn new(password: String) -> Self {
+            Self { password }
+        }
+
         fn key(&self, salt: &[u8]) -> Result<Vec<u8>, Error> {
             let mut pbkdf2_hash = [0u8; KEY_LEN];
             ::openssl::pkcs5::pbkdf2_hmac(
@@ -134,10 +216,6 @@ mod encrypters {
         }
     }
     impl Encrypter for OpenSSL {
-        fn new(password: String) -> Self {
-            Self { password }
-        }
-
         fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error> {
             let mut iv = vec![0u8; IV_SIZE];
             ::openssl::rand::rand_bytes(&mut iv).context("generating random bytes")?;
