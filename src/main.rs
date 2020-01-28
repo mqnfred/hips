@@ -2,7 +2,7 @@
 extern crate clap;
 
 use ::anyhow::{Context,Error};
-use ::hips::{Database,Backend,Encrypter,Secret};
+use ::hips::{Database,Secret};
 use ::std::io::{Read,Write};
 use ::std::path::PathBuf;
 
@@ -27,6 +27,7 @@ fn run() -> Result<(), Error> {
         Command::Set(set) => set.run(db),
         Command::Rot(rot) => rot.run(db, db_path, password),
         Command::Env(env) => env.run(db),
+        Command::Del(del) => del.run(db),
     }
 }
 
@@ -50,6 +51,8 @@ enum Command {
     Rot(commands::Rot),
     #[clap(name = "env", about = "Output scripts which load all secrets as environment variables")]
     Env(commands::Env),
+    #[clap(name = "del", about = "Remove the given secret from the database")]
+    Del(commands::Del),
 }
 
 mod commands {
@@ -127,6 +130,17 @@ mod commands {
                 ::std::io::stdout(),
                 "{}", assignments.join("\n")
             ).context("writing assignments to stdin")?)
+        }
+    }
+
+    #[derive(Clap, Debug)]
+    pub struct Del {
+        #[clap(name = "name")]
+        name: String,
+    }
+    impl Del {
+        pub fn run(self, mut db: Database) -> Result<(), Error> {
+            db.del(self.name)
         }
     }
 }

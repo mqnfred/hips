@@ -54,6 +54,10 @@ impl Database {
         ).context("decrypting secret")
     }
 
+    pub fn del(&mut self, name: String) -> Result<(), Error> {
+        self.b.del(name).context("removing secret")
+    }
+
     pub fn all(&mut self) -> Result<Vec<Secret>, Error> {
         self.b.all().context("listing secrets")?.into_iter().map(|s| {
             self.e.decrypt(s)
@@ -64,6 +68,7 @@ impl Database {
 pub trait Backend {
     fn set(&mut self, encrypted: Encrypted) -> Result<(), Error>;
     fn get(&mut self, name: String) -> Result<Encrypted, Error>;
+    fn del(&mut self, name: String) -> Result<(), Error>;
     fn all(&mut self) -> Result<Vec<Encrypted>, Error>;
 }
 mod backends {
@@ -111,6 +116,13 @@ mod backends {
             }).map(|s| Ok(s)).unwrap_or_else(|| Err(Error::msg("secret not found")))
         }
 
+        fn del(&mut self, name: String) -> Result<(), Error> {
+            let secrets = self.read().context("loading database")?.into_iter().filter(|s| {
+                s.name != name
+            }).collect();
+            self.write(secrets)
+        }
+
         fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
             self.read()
         }
@@ -135,7 +147,7 @@ mod backends {
                 Ok(md) => md,
             };
 
-            if root_path.is_dir() {
+            if root_md.is_dir() {
                 Ok(root_path)
             } else {
                 Err(Error::msg("secret path is invalid (should be a directory)"))
@@ -171,6 +183,10 @@ mod backends {
                 secret: ::std::fs::read_to_string(secret_path).context("reading secret file")?,
                 salt: ::std::fs::read_to_string(salt_path).context("reading salt file")?,
             })
+        }
+
+        fn del(&mut self, name: String) -> Result<(), Error> {
+            Ok(::std::fs::remove_dir_all(self.path.join(name))?)
         }
 
         fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
