@@ -2,7 +2,7 @@
 extern crate clap;
 
 use ::failure::Error;
-use ::std::io::Write;
+use ::std::io::{Read,Write};
 
 fn main() -> Result<(), Error> {
     if let Err(err) = run() {
@@ -15,7 +15,8 @@ fn main() -> Result<(), Error> {
 fn run() -> Result<(), Error> {
     let opts = Options::parse();
 
-    let master = ::std::fs::read_to_string(opts.master_file)?;
+    let mut master = String::new();
+    ::std::io::stdin().lock().read_to_string(&mut master)?;
     let db = ::hips::EncryptedYaml::new(opts.database, master);
 
     match opts.subcmd {
@@ -30,8 +31,6 @@ fn run() -> Result<(), Error> {
 struct Options {
     #[clap(short = "d", long = "db", help = "The secrets database to manipulate")]
     database: String,
-    #[clap(short = "m", long = "master", help = "The file which contains your master secret")]
-    master_file: String,
 
     #[clap(subcommand)]
     subcmd: Command,
