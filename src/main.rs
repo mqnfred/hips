@@ -80,8 +80,8 @@ mod commands {
 
     #[derive(Clap, Debug)]
     pub struct Env {
-        #[clap(short = "i", long = "interpreter")]
-        interpreter: Option<String>,
+        #[clap(long = "shell")]
+        shell: Option<String>,
     }
     impl Env {
         pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
@@ -89,11 +89,8 @@ mod commands {
                 format!("export {} = '{}';", k.to_uppercase(), v)
             }).collect::<Vec<String>>();
 
-            if let Some(interpreter) = self.interpreter {
-                writeln!(
-                    ::std::io::stdout(),
-                    "#!{}\n", interpreter,
-                ).context("writing shebang to stdout")?;
+            if let Some(shell) = self.shell {
+                writeln!(::std::io::stdout(), "#!{}", shell).context("writing shebang to stdout")?;
             }
             Ok(writeln!(
                 ::std::io::stdout(),

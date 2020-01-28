@@ -7,7 +7,7 @@ While it is beneficial to treat secrets like code, it is not advisable to store
 them alongside it in a plain text fashion. This is where `hips` comes in: it is
 a small utility meant to manage a yaml file containing encrypted secrets.
 
-## Why?
+## Why? me+code=secrets
 
 As a software engineer, we have all seen mis-managed secrets. I can easily
 imagine what it was like to manage code without versioning systems, because I
@@ -42,10 +42,16 @@ $ echo my-master-pw | hips -d secrets.yaml set my_secret 'what-i-want-to-hide'
 $ cat secrets.yaml
 ---
 my_secret: GSA2NIQ+ox2PpyzKha9g+qVWj+MwrwBAOClA8sqOW7qLdIaU0tKCli78yfjj/0k=
+
 $ echo my-master-pw | hips -d secrets.yaml get my_secret
 what-i-want-to-hide
+
 $ echo bad-pw | target/release/hips -d secrets.yaml get my_secret
 error: retrieving secret: decrypting secret: decrypting ciphertext: OpenSSL error
+
+$ echo my-master-pw | hips -d secrets.yaml env --shell=/bin/bash
+#!/bin/bash
+export MY_SECRET='what-i-want-to-hide';
 ```
 
 You can see that we expose three commands:
