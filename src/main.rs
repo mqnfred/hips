@@ -5,10 +5,11 @@ use ::failure::Error;
 
 fn main() -> Result<(), Error> {
     let opts = Options::parse();
+    let store = ::hips::EncryptedYaml::new(opts.store, opts.password);
     match opts.subcmd {
-        Command::Env(env) => env.run(opts.store, opts.password),
-        Command::Set(set) => set.run(opts.store, opts.password),
-        Command::Get(get) => get.run(opts.store, opts.password),
+        Command::Env(env) => env.run(store),
+        Command::Set(set) => set.run(store),
+        Command::Get(get) => get.run(store),
     }
 }
 
@@ -36,7 +37,6 @@ enum Command {
 
 
 mod commands {
-    use ::hips::Store;
     use ::std::io::Write;
     use super::*;
 
@@ -46,9 +46,8 @@ mod commands {
         interpreter: Option<String>,
     }
     impl Env {
-        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
-            let mut db = ::hips::EncryptedYaml::new(store, pw);
-            let assignments = db.all()?.into_iter().map(|(k, v)| {
+        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
+            let assignments = store.all()?.into_iter().map(|(k, v)| {
                 format!("export {} = '{}';", k.to_uppercase(), v)
             }).collect::<Vec<String>>();
 
@@ -65,9 +64,8 @@ mod commands {
         key: String,
     }
     impl Get {
-        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
-            let mut db = ::hips::EncryptedYaml::new(store, pw);
-            Ok(writeln!(::std::io::stdout(), "{}", db.get(self.key)?)?)
+        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
+            Ok(writeln!(::std::io::stdout(), "{}", store.get(self.key)?)?)
         }
     }
 
@@ -79,9 +77,8 @@ mod commands {
         value: String,
     }
     impl Set {
-        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
-            let mut db = ::hips::EncryptedYaml::new(store, pw);
-            db.set(self.key, self.value)
+        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
+            store.set(self.key, self.value)
         }
     }
 }
