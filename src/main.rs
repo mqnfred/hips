@@ -2,7 +2,7 @@
 extern crate clap;
 
 use ::anyhow::{Context,Error};
-use ::hips::Store;
+use ::hips::{Secret,Store};
 use ::std::io::{Read,Write};
 
 fn main() -> Result<(), Error> {
@@ -60,24 +60,26 @@ mod commands {
         name: String,
     }
     impl Get {
-        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
+        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
             Ok(writeln!(
                 ::std::io::stdout(), "{}",
-                store.get(self.name).context("retrieving secret")?,
+                store.get(self.name).context("retrieving secret")?.secret,
             ).context("writing secret to stdout")?)
         }
     }
 
     #[derive(Clap, Debug)]
     pub struct Set {
-        #[clap(name = "key")]
-        key: String,
-        #[clap(name = "value")]
-        value: String,
+        #[clap(name = "name")]
+        name: String,
+        #[clap(name = "secret")]
+        secret: String,
     }
     impl Set {
-        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
-            store.set(self.key, self.value).context("writing secret to database") 
+        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
+            store.set(
+                Secret{name: self.name, secret: self.secret}
+            ).context("writing secret to database") 
         }
     }
 
@@ -87,10 +89,10 @@ mod commands {
         new_password: String,
     }
     impl Rot {
-        pub fn run<S: ::hips::Store>(self, mut store: S, db: String) -> Result<(), Error> {
+        pub fn run<S: ::hips::SecretStore>(self, mut store: S, db: String) -> Result<(), Error> {
             let mut new_store = ::hips::EncryptedYaml::new(db, self.new_password);
-            for (name, secret) in store.all().context("listing secrets")? {
-                new_store.set(name, secret).context("adding secret to new store")?;
+            for secret in store.all().context("listing secrets")? {
+                new_store.set(secret).context("adding secret to new store")?;
             }
             Ok(())
         }
@@ -102,9 +104,9 @@ mod commands {
         shell: Option<String>,
     }
     impl Env {
-        pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
-            let assignments = store.all().context("listing secrets")?.into_iter().map(|(k, v)| {
-                format!("export {} = '{}';", k.to_uppercase(), v)
+        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
+            let assignments = store.all().context("listing secrets")?.into_iter().map(|s| {
+                format!("export {} = '{}';", s.name.to_uppercase(), s.secret)
             }).collect::<Vec<String>>();
 
             if let Some(shell) = self.shell {

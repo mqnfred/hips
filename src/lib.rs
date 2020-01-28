@@ -1,54 +1,64 @@
+#![feature(trait_alias)]
+
+#[macro_use]
+extern crate serde;
+
 use ::anyhow::{Context,Error};
-use ::std::collections::BTreeMap;
 use ::std::io::Write;
 
+pub trait SecretStore = Store<Secret>;
 pub type EncryptedYaml = stores::EncryptedStore<stores::YAML, encrypters::OpenSSL>;
 
-pub trait Store {
-    fn set(&mut self, name: String, value: String) -> Result<(), Error>;
-    fn get(&mut self, name: String) -> Result<String, Error>;
-    fn all(&mut self) -> Result<BTreeMap<String, String>, Error>;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Secret {
+    pub name: String,
+    pub secret: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Encrypted {
+    name: String,
+    secret: String,
+    salt: String,
+}
+
+pub trait Store<FORMAT: ::serde::Serialize + for<'a> ::serde::Deserialize<'a>> {
+    fn set(&mut self, payload: FORMAT) -> Result<(), Error>;
+    fn get(&mut self, name: String) -> Result<FORMAT, Error>;
+    fn all(&mut self) -> Result<Vec<FORMAT>, Error>;
 }
 
 pub trait Encrypter {
     fn new(password: String) -> Self;
-    fn encrypt(&mut self, value: &str) -> Result<String, Error>;
-    fn decrypt(&mut self, value: &str) -> Result<String, Error>;
+    fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error>;
+    fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret, Error>;
 }
 
 mod stores {
     use super::*;
 
-    pub struct EncryptedStore<S: Store, E: Encrypter>(S, E);
+    pub struct EncryptedStore<S: Store<Encrypted>, E: Encrypter>(S, E);
     impl EncryptedStore<YAML, encrypters::OpenSSL> {
         pub fn new(path: String, password: String) -> Self {
             Self(YAML::new(path), encrypters::OpenSSL::new(password))
         }
     }
-    impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
-        fn set(&mut self, name: String, value: String) -> Result<(), Error> {
-            self.0.set(
-                self.1.encrypt(&name).context("encrypting name")?,
-                self.1.encrypt(&value).context("encrypting secret")?,
-            )
+    impl<S: Store<Encrypted>, E: Encrypter> Store<Secret> for EncryptedStore<S, E> {
+        fn set(&mut self, secret: Secret) -> Result<(), Error> {
+            let encrypted = self.1.encrypt(secret).context("encrypting secret")?;
+            self.0.set(encrypted).context("storing secret")
         }
 
-        fn get(&mut self, name: String) -> Result<String, Error> {
-            let encrypted_name = self.1.encrypt(&name).context("encrypting name")?;
+        fn get(&mut self, name: String) -> Result<Secret, Error> {
             self.1.decrypt(
-                &self.0.get(encrypted_name).context("looking up name")?
+                self.0.get(name).context("looking up name")?
             ).context("decrypting secret")
         }
 
-        fn all(&mut self) -> Result<BTreeMap<String, String>, Error> {
-            let mut map = BTreeMap::<String, String>::new();
-            for (k, v) in self.0.all().context("listing secrets")? {
-                map.insert(
-                    self.1.decrypt(&k).context("decrypting name")?,
-                    self.1.decrypt(&v).context("decrypting secret")?,
-                );
-            }
-            Ok(map)
+        fn all(&mut self) -> Result<Vec<Secret>, Error> {
+            self.0.all().context("listing secrets")?.into_iter().map(|s| {
+                self.1.decrypt(s)
+            }).collect::<Result<Vec<Secret>, Error>>()
         }
     }
 
@@ -60,36 +70,41 @@ mod stores {
             Self { path }
         }
 
-        fn read(&mut self) -> Result<BTreeMap<String, String>, Error> {
+        fn read(&mut self) -> Result<Vec<Encrypted>, Error> {
             Ok(::serde_yaml::from_str(&match ::std::fs::read_to_string(&self.path) {
-                Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok("{}".to_string()),
+                Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok("[]".to_string()),
                 Err(err) => Err(err),
                 Ok(val) => Ok(val),
             }.context("reading file")?).context("unmarshalling yaml")?)
         }
 
-        fn write(&mut self, map: BTreeMap<String, String>) -> Result<(), Error> {
+        fn write(&mut self, secrets: Vec<Encrypted>) -> Result<(), Error> {
             let mut f = ::std::fs::OpenOptions::new().write(true).create(true)
                 .truncate(true).open(&self.path).context("opening file")?;
             Ok(f.write_all(
-                ::serde_yaml::to_string(&map).context("marshalling to yaml")?.as_bytes()
+                ::serde_yaml::to_string(&secrets).context("marshalling to yaml")?.as_bytes()
             ).context("writing to file")?)
         }
     }
-    impl Store for YAML {
-        fn set(&mut self, name: String, value: String) -> Result<(), Error> {
-            let mut map = self.read().context("loading database")?;
-            map.insert(name, value);
-            self.write(map).context("writing database")
+    impl Store<Encrypted> for YAML {
+        fn set(&mut self, encrypted: Encrypted) -> Result<(), Error> {
+            let mut secrets = self.read().context("loading database")?;
+            if let Some(existing_pos) = secrets.iter().position(|s| s.name == encrypted.name) {
+                secrets.remove(existing_pos);
+                secrets.insert(existing_pos, encrypted);
+            } else {
+                secrets.push(encrypted);
+            }
+            self.write(secrets).context("writing database")
         }
 
-        fn get(&mut self, name: String) -> Result<String, Error> {
-            self.read().context("loading database")?.get(&name).map(|f| {
-                Ok(f.to_owned())
-            }).unwrap_or_else(|| Err(Error::msg(format!("secret not found: {}", name))))
+        fn get(&mut self, name: String) -> Result<Encrypted, Error> {
+            self.read().context("loading database")?.into_iter().find(|s| {
+                s.name == name
+            }).map(|s| Ok(s)).unwrap_or_else(|| Err(Error::msg("secret not found")))
         }
 
-        fn all(&mut self) -> Result<BTreeMap<String, String>, Error> {
+        fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
             self.read()
         }
     }
@@ -124,37 +139,45 @@ mod encrypters {
             Self { password }
         }
 
-        fn encrypt(&mut self, to_encrypt: &str) -> Result<String, Error> {
+        fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error> {
             let mut iv = vec![0u8; IV_SIZE];
             ::openssl::rand::rand_bytes(&mut iv).context("generating random bytes")?;
             let mut salt = vec![0u8; SALT_SIZE];
             ::openssl::rand::rand_bytes(&mut salt).context("generating random bytes")?;
             let mut tag = vec![0u8; TAG_SIZE];
 
-            let cipher = ::openssl::symm::Cipher::aes_256_gcm();
             let ciphertext = ::openssl::symm::encrypt_aead(
-                cipher, &self.key(&salt).context("generating key")?,
-                Some(&iv), &[], to_encrypt.as_bytes(), &mut tag,
+                ::openssl::symm::Cipher::aes_256_gcm(),
+                &self.key(&salt).context("generating key")?,
+                Some(&iv), &[], secret.secret.as_bytes(), &mut tag,
             ).context("encrypting plaintext")?;
 
-            Ok(::base64::encode(
-                &iv.into_iter().chain(
-                    salt.into_iter().chain(tag.into_iter())
-                ).chain(ciphertext.into_iter()).collect::<Vec<u8>>()
-            ))
+            let ciphertext = ::base64::encode(&iv.into_iter().chain(
+                tag.into_iter()
+            ).chain(ciphertext.into_iter()).collect::<Vec<u8>>());
+            let salt = ::base64::encode(&salt);
+
+            Ok(Encrypted{ name: secret.name, secret: ciphertext, salt })
         }
 
-        fn decrypt(&mut self, to_decrypt: &str) -> Result<String, Error> {
-            let to_decrypt = ::base64::decode(to_decrypt).context("decoding base64")?;
-            let iv = &to_decrypt[..IV_SIZE];
-            let salt = &to_decrypt[IV_SIZE..(IV_SIZE + SALT_SIZE)];
-            let tag = &to_decrypt[(IV_SIZE + SALT_SIZE)..(IV_SIZE + SALT_SIZE + TAG_SIZE)];
-            let ciphertext = &to_decrypt[(IV_SIZE + SALT_SIZE + TAG_SIZE)..];
-            Ok(::std::str::from_utf8(&::openssl::symm::decrypt_aead(
+        fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret, Error> {
+            let ciphertext = ::base64::decode(&encrypted.secret).context("decoding ciphertext")?;
+
+            let iv = &ciphertext[..IV_SIZE];
+            let tag = &ciphertext[IV_SIZE..(IV_SIZE + TAG_SIZE)];
+            let ciphertext = &ciphertext[(IV_SIZE + TAG_SIZE)..];
+            let salt = ::base64::decode(&encrypted.salt).context("decoding salt")?;
+
+            let secret = ::openssl::symm::decrypt_aead(
                 ::openssl::symm::Cipher::aes_256_gcm(),
-                &self.key(salt).context("generating key")?,
+                &self.key(&salt).context("generating key")?,
                 Some(&iv), &[], &ciphertext, &tag,
-            ).context("processing ciphertext")?).context("loading string as utf8")?.into())
+            ).context("processing ciphertext")?;
+
+            Ok(Secret{
+                name: encrypted.name,
+                secret: ::std::str::from_utf8(&secret).context("loading as utf8")?.to_owned(),
+            })
         }
     }
 }

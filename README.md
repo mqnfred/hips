@@ -33,12 +33,12 @@ Let's look at what a typical secret management session might look like:
 $ echo my-master-pw | hips -d secrets.yaml set my_secret 'what-i-want-to-hide'
 $ cat secrets.yaml
 ---
-my_secret: GSA2NIQ+ox2PpyzKha9g+qVWj+MwrwBAOClA8sqOW7qLdIaU0tKCli78yfjj/0k=
+4xSt9Vm+tsn7rj71WQ+y+NoAeD+TIfdbd71qNTwK+uVIOzo0jmdP1vwrbpyICE6vJdiPJdQhpZHAs49SZAElOsddu8Wr: jMdEH5ldRIwmqWMoIJ2pfhGy3SDP1W6NwYTXcMn7WypLUZV8kHQ+fuosyfRpaScv5V/L//AsXBDHHP0grHI6iIUDZb1obj1as272sV9Yyg==
 
 $ echo my-master-pw | hips -d secrets.yaml get my_secret
 what-i-want-to-hide
 
-$ echo bad-pw | target/release/hips -d secrets.yaml get my_secret
+$ echo bad-pw | hips -d secrets.yaml get my_secret
 error: retrieving secret: decrypting secret: processing ciphertext: OpenSSL error
 
 $ echo my-master-pw | hips -d secrets.yaml env --shell=/bin/bash
