@@ -1,4 +1,4 @@
-# **H**ide **i**n **p**lain **s**ight
+# Hide in plain sight
 
 The goal of `hips` is to enable developers to store their production secrets
 alongside their code.

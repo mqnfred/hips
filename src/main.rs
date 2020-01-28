@@ -2,14 +2,20 @@
 extern crate clap;
 
 use ::failure::Error;
+use ::std::io::Write;
 
 fn main() -> Result<(), Error> {
     let opts = Options::parse();
     let store = ::hips::EncryptedYaml::new(opts.store, opts.password);
-    match opts.subcmd {
+
+    if let Err(err) = match opts.subcmd {
         Command::Env(env) => env.run(store),
         Command::Set(set) => set.run(store),
         Command::Get(get) => get.run(store),
+    } {
+        Ok(writeln!(::std::io::stderr(), "{}", err)?)
+    } else {
+        Ok(())
     }
 }
 
