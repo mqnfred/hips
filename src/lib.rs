@@ -6,10 +6,6 @@ extern crate serde;
 use ::anyhow::{Context,Error};
 use ::std::io::Write;
 
-pub trait SecretStore = Store<Secret>;
-pub type EncryptedYaml = stores::EncryptedStore<stores::YAML, encrypters::OpenSSL>;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Secret {
     pub name: String,
     pub secret: String,
@@ -22,45 +18,42 @@ pub struct Encrypted {
     salt: String,
 }
 
-pub trait Store<FORMAT: ::serde::Serialize + for<'a> ::serde::Deserialize<'a>> {
-    fn set(&mut self, payload: FORMAT) -> Result<(), Error>;
-    fn get(&mut self, name: String) -> Result<FORMAT, Error>;
-    fn all(&mut self) -> Result<Vec<FORMAT>, Error>;
+pub struct Database<B: Backend, E: Encrypter> {
+    b: B,
+    e: E,
+}
+impl Database<backends::YAML, encrypters::OpenSSL> {
+    pub fn new(path: String, password: String) -> Self {
+        Self { b: backends::YAML::new(path), e: encrypters::OpenSSL::new(password) }
+    }
+}
+impl<B: Backend, E: Encrypter> Database<B, E> {
+    pub fn set(&mut self, secret: Secret) -> Result<(), Error> {
+        let encrypted = self.e.encrypt(secret).context("encrypting secret")?;
+        self.b.set(encrypted).context("storing secret")
+    }
+
+    pub fn get(&mut self, name: String) -> Result<Secret, Error> {
+        self.e.decrypt(
+            self.b.get(name).context("looking up name")?
+        ).context("decrypting secret")
+    }
+
+    pub fn all(&mut self) -> Result<Vec<Secret>, Error> {
+        self.b.all().context("listing secrets")?.into_iter().map(|s| {
+            self.e.decrypt(s)
+        }).collect::<Result<Vec<Secret>, Error>>()
+    }
 }
 
-pub trait Encrypter {
-    fn new(password: String) -> Self;
-    fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error>;
-    fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret, Error>;
+pub trait Backend {
+    fn set(&mut self, encrypted: Encrypted) -> Result<(), Error>;
+    fn get(&mut self, name: String) -> Result<Encrypted, Error>;
+    fn all(&mut self) -> Result<Vec<Encrypted>, Error>;
 }
-
-mod stores {
+pub use backends::YAML;
+mod backends {
     use super::*;
-
-    pub struct EncryptedStore<S: Store<Encrypted>, E: Encrypter>(S, E);
-    impl EncryptedStore<YAML, encrypters::OpenSSL> {
-        pub fn new(path: String, password: String) -> Self {
-            Self(YAML::new(path), encrypters::OpenSSL::new(password))
-        }
-    }
-    impl<S: Store<Encrypted>, E: Encrypter> Store<Secret> for EncryptedStore<S, E> {
-        fn set(&mut self, secret: Secret) -> Result<(), Error> {
-            let encrypted = self.1.encrypt(secret).context("encrypting secret")?;
-            self.0.set(encrypted).context("storing secret")
-        }
-
-        fn get(&mut self, name: String) -> Result<Secret, Error> {
-            self.1.decrypt(
-                self.0.get(name).context("looking up name")?
-            ).context("decrypting secret")
-        }
-
-        fn all(&mut self) -> Result<Vec<Secret>, Error> {
-            self.0.all().context("listing secrets")?.into_iter().map(|s| {
-                self.1.decrypt(s)
-            }).collect::<Result<Vec<Secret>, Error>>()
-        }
-    }
 
     pub struct YAML {
         path: String,
@@ -86,7 +79,7 @@ mod stores {
             ).context("writing to file")?)
         }
     }
-    impl Store<Encrypted> for YAML {
+    impl Backend for YAML {
         fn set(&mut self, encrypted: Encrypted) -> Result<(), Error> {
             let mut secrets = self.read().context("loading database")?;
             if let Some(existing_pos) = secrets.iter().position(|s| s.name == encrypted.name) {
@@ -110,6 +103,12 @@ mod stores {
     }
 }
 
+pub trait Encrypter {
+    fn new(password: String) -> Self;
+    fn encrypt(&mut self, secret: Secret) -> Result<Encrypted, Error>;
+    fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret, Error>;
+}
+pub use encrypters::OpenSSL;
 mod encrypters {
     use super::*;
 

@@ -2,7 +2,7 @@
 extern crate clap;
 
 use ::anyhow::{Context,Error};
-use ::hips::{Secret,Store};
+use ::hips::{Database,Backend,Encrypter,Secret};
 use ::std::io::{Read,Write};
 
 fn main() -> Result<(), Error> {
@@ -18,7 +18,7 @@ fn run() -> Result<(), Error> {
 
     let mut password = String::new();
     ::std::io::stdin().lock().read_to_string(&mut password)?;
-    let db = ::hips::EncryptedYaml::new(opts.database.clone(), password);
+    let db = Database::<::hips::YAML, ::hips::OpenSSL>::new(opts.database.clone(), password);
 
     match opts.subcmd {
         Command::Get(get) => get.run(db),
@@ -60,10 +60,10 @@ mod commands {
         name: String,
     }
     impl Get {
-        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
+        pub fn run<B: Backend, E: Encrypter>(self, mut db: Database<B, E>) -> Result<(), Error> {
             Ok(writeln!(
                 ::std::io::stdout(), "{}",
-                store.get(self.name).context("retrieving secret")?.secret,
+                db.get(self.name).context("retrieving secret")?.secret,
             ).context("writing secret to stdout")?)
         }
     }
@@ -76,8 +76,8 @@ mod commands {
         secret: String,
     }
     impl Set {
-        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
-            store.set(
+        pub fn run<B: Backend, E: Encrypter>(self, mut db: Database<B, E>) -> Result<(), Error> {
+            db.set(
                 Secret{name: self.name, secret: self.secret}
             ).context("writing secret to database") 
         }
@@ -89,10 +89,14 @@ mod commands {
         new_password: String,
     }
     impl Rot {
-        pub fn run<S: ::hips::SecretStore>(self, mut store: S, db: String) -> Result<(), Error> {
-            let mut new_store = ::hips::EncryptedYaml::new(db, self.new_password);
-            for secret in store.all().context("listing secrets")? {
-                new_store.set(secret).context("adding secret to new store")?;
+        pub fn run<B: Backend, E: Encrypter>(
+            self,
+            mut db: Database<B, E>,
+            db_path: String,
+        ) -> Result<(), Error> {
+            let mut new_db = Database::<::hips::YAML, ::hips::OpenSSL>::new(db_path, self.new_password);
+            for secret in db.all().context("listing secrets")? {
+                new_db.set(secret).context("adding secret to new db")?;
             }
             Ok(())
         }
@@ -104,8 +108,8 @@ mod commands {
         shell: Option<String>,
     }
     impl Env {
-        pub fn run<S: ::hips::SecretStore>(self, mut store: S) -> Result<(), Error> {
-            let assignments = store.all().context("listing secrets")?.into_iter().map(|s| {
+        pub fn run<B: Backend, E: Encrypter>(self, mut db: Database<B, E>) -> Result<(), Error> {
+            let assignments = db.all().context("listing secrets")?.into_iter().map(|s| {
                 format!("export {} = '{}';", s.name.to_uppercase(), s.secret)
             }).collect::<Vec<String>>();
 
