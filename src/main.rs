@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate clap;
 
-fn main() -> Result<(), ::failure::Error> {
+use ::failure::Error;
+
+fn main() -> Result<(), Error> {
     let opts = Options::parse();
     match opts.subcmd {
         Command::Env(env) => env.run(opts.store, opts.password),
@@ -36,6 +38,7 @@ enum Command {
 mod commands {
     use ::hips::Store;
     use ::std::io::Write;
+    use super::*;
 
     #[derive(Clap, Debug)]
     pub struct Env {
@@ -43,7 +46,7 @@ mod commands {
         interpreter: Option<String>,
     }
     impl Env {
-        pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
+        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
             let mut db = ::hips::EncryptedYaml::new(store, pw);
             let assignments = db.all()?.into_iter().map(|(k, v)| {
                 format!("export {} = '{}';", k.to_uppercase(), v)
@@ -62,7 +65,7 @@ mod commands {
         key: String,
     }
     impl Get {
-        pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
+        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
             let mut db = ::hips::EncryptedYaml::new(store, pw);
             Ok(writeln!(::std::io::stdout(), "{}", db.get(self.key)?)?)
         }
@@ -76,7 +79,7 @@ mod commands {
         value: String,
     }
     impl Set {
-        pub fn run(self, store: String, pw: String) -> Result<(), ::failure::Error> {
+        pub fn run(self, store: String, pw: String) -> Result<(), Error> {
             let mut db = ::hips::EncryptedYaml::new(store, pw);
             db.set(self.key, self.value)
         }
