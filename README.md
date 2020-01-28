@@ -11,15 +11,21 @@ a small utility meant to manage a yaml file containing encrypted secrets.
 
 Let's look at what a typical secret management session might look like:
 
-```
+```shell
+$ cat store.yaml
+cat: store.yaml: No such file or directory
+
 $ hips -s store.yaml -p my_master_password set my_secret 'what-i-want-to-hide'
 $ cat store.yaml
 ---
-my_secret: gq8DEm5ot4eFQu/y+Y4UxwJ0RZ162EfaMJa2EuefXEk=%
+my_secret: gq8DEm5ot4eFQu/y+Y4UxwJ0RZ162EfaMJa2EuefXEk=
+
 $ hips -s store.yaml -p my_master_password get my_secret
 what-i-want-to-hide
+
 $ hips -s store.yaml -p wrong_password get my_secret
 TODO: error
+
 $ hips -s store.yaml -p my_master_password env --interpreter '/bin/sh'
 #!/bin/sh
 
