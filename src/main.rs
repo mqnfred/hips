@@ -5,27 +5,33 @@ use ::failure::Error;
 use ::std::io::Write;
 
 fn main() -> Result<(), Error> {
-    let opts = Options::parse();
-    let store = ::hips::EncryptedYaml::new(opts.store, opts.password);
-
-    if let Err(err) = match opts.subcmd {
-        Command::Env(env) => env.run(store),
-        Command::Set(set) => set.run(store),
-        Command::Get(get) => get.run(store),
-    } {
+    if let Err(err) = run() {
         Ok(writeln!(::std::io::stderr(), "{}", err)?)
     } else {
         Ok(())
     }
 }
 
+fn run() -> Result<(), Error> {
+    let opts = Options::parse();
+
+    let master = ::std::fs::read_to_string(opts.master_file)?;
+    let db = ::hips::EncryptedYaml::new(opts.database, master);
+
+    match opts.subcmd {
+        Command::Env(env) => env.run(db),
+        Command::Set(set) => set.run(db),
+        Command::Get(get) => get.run(db),
+    }
+}
+
 #[derive(Clap, Debug)]
 #[clap(version = "0.0.1", author = "Louis Feuvrier, mqnfred@gmail.com")]
 struct Options {
-    #[clap(short = "s", long = "store")]
-    store: String,
-    #[clap(short = "p", long = "password")]
-    password: String,
+    #[clap(short = "d", long = "db", help = "The secrets database to manipulate")]
+    database: String,
+    #[clap(short = "m", long = "master", help = "The file which contains your master secret")]
+    master_file: String,
 
     #[clap(subcommand)]
     subcmd: Command,

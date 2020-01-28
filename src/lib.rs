@@ -11,7 +11,7 @@ pub trait Store {
 }
 
 pub trait Encrypter {
-    fn new(password: String) -> Self;
+    fn new(master: String) -> Self;
     fn encrypt(&mut self, value: &str) -> Result<String, Error>;
     fn decrypt(&mut self, value: &str) -> Result<String, Error>;
 }
@@ -21,8 +21,8 @@ mod stores {
 
     pub struct EncryptedStore<S: Store, E: Encrypter>(S, E);
     impl EncryptedStore<YAML, encrypters::Magic> {
-        pub fn new(path: String, password: String) -> Self {
-            Self(YAML::new(path), encrypters::Magic::new(password))
+        pub fn new(path: String, master: String) -> Self {
+            Self(YAML::new(path), encrypters::Magic::new(master))
         }
     }
     impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
