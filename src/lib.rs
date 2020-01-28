@@ -1,36 +1,7 @@
 use ::std::collections::BTreeMap;
 use ::std::io::Write;
 
-pub type EncryptedYaml = EncryptedStore<stores::YAML, encrypters::Magic>;
-
-pub struct EncryptedStore<S: Store, E: Encrypter> {
-    s: S,
-    e: E,
-}
-
-impl EncryptedStore<stores::YAML, encrypters::Magic> {
-    pub fn new(path: String, password: String) -> Self {
-        Self{ s: stores::YAML::new(path), e: encrypters::Magic::new(password) }
-    }
-}
-
-impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
-    fn set(&mut self, key: String, value: String) -> Result<(), ::failure::Error> {
-        self.s.set(key, self.e.encrypt(&value)?)
-    }
-
-    fn get(&mut self, key: String) -> Result<String, ::failure::Error> {
-        self.e.decrypt(&self.s.get(key)?)
-    }
-
-    fn all(&mut self) -> Result<BTreeMap<String, String>, ::failure::Error> {
-        let mut map = BTreeMap::<String, String>::new();
-        for (k, v) in self.s.all()? {
-            map.insert(k, self.e.decrypt(&v)?);
-        }
-        Ok(map)
-    }
-}
+pub type EncryptedYaml = stores::EncryptedStore<stores::YAML, encrypters::Magic>;
 
 pub trait Store {
     fn set(&mut self, key: String, value: String) -> Result<(), ::failure::Error>;
@@ -46,6 +17,32 @@ pub trait Encrypter {
 
 mod stores {
     use super::*;
+
+    pub struct EncryptedStore<S: Store, E: Encrypter>(S, E);
+
+    impl EncryptedStore<YAML, encrypters::Magic> {
+        pub fn new(path: String, password: String) -> Self {
+            Self(YAML::new(path), encrypters::Magic::new(password))
+        }
+    }
+
+    impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
+        fn set(&mut self, key: String, value: String) -> Result<(), ::failure::Error> {
+            self.0.set(key, self.1.encrypt(&value)?)
+        }
+
+        fn get(&mut self, key: String) -> Result<String, ::failure::Error> {
+            self.1.decrypt(&self.0.get(key)?)
+        }
+
+        fn all(&mut self) -> Result<BTreeMap<String, String>, ::failure::Error> {
+            let mut map = BTreeMap::<String, String>::new();
+            for (k, v) in self.0.all()? {
+                map.insert(k, self.1.decrypt(&v)?);
+            }
+            Ok(map)
+        }
+    }
 
     pub struct YAML {
         path: String,
