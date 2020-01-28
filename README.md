@@ -39,7 +39,7 @@ $ echo my-master-pw | hips -d secrets.yaml get my_secret
 what-i-want-to-hide
 
 $ echo bad-pw | target/release/hips -d secrets.yaml get my_secret
-error: retrieving secret: decrypting secret: decrypting ciphertext: OpenSSL error
+error: retrieving secret: decrypting secret: processing ciphertext: OpenSSL error
 
 $ echo my-master-pw | hips -d secrets.yaml env --shell=/bin/bash
 #!/bin/bash

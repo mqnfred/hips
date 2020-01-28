@@ -141,7 +141,7 @@ mod encrypters {
                 ::openssl::symm::Cipher::aes_256_gcm(),
                 &self.key().context("generating key")?,
                 Some(&iv), &[], &ciphertext, &tag,
-            ).context("decrypting ciphertext")?).context("loading string as utf8")?.into())
+            ).context("processing ciphertext")?).context("loading string as utf8")?.into())
         }
     }
 }
