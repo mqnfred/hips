@@ -2,6 +2,7 @@
 extern crate clap;
 
 use ::anyhow::{Context,Error};
+use ::hips::Store;
 use ::std::io::{Read,Write};
 
 fn main() -> Result<(), Error> {
@@ -15,13 +16,14 @@ fn main() -> Result<(), Error> {
 fn run() -> Result<(), Error> {
     let opts = Options::parse();
 
-    let mut master = String::new();
-    ::std::io::stdin().lock().read_to_string(&mut master)?;
-    let db = ::hips::EncryptedYaml::new(opts.database, master);
+    let mut password = String::new();
+    ::std::io::stdin().lock().read_to_string(&mut password)?;
+    let db = ::hips::EncryptedYaml::new(opts.database.clone(), password);
 
     match opts.subcmd {
         Command::Get(get) => get.run(db),
         Command::Set(set) => set.run(db),
+        Command::Rot(rot) => rot.run(db, opts.database),
         Command::Env(env) => env.run(db),
     }
 }
@@ -42,10 +44,11 @@ enum Command {
     Get(commands::Get),
     #[clap(name = "set", about = "Set a secret to a given value")]
     Set(commands::Set),
+    #[clap(name = "rot", about = "Re-encrypt the whole database using a new password")]
+    Rot(commands::Rot),
     #[clap(name = "env", about = "Output scripts which load all secrets as environment variables")]
     Env(commands::Env),
 }
-
 
 mod commands {
     use ::std::io::Write;
@@ -75,6 +78,21 @@ mod commands {
     impl Set {
         pub fn run<S: ::hips::Store>(self, mut store: S) -> Result<(), Error> {
             store.set(self.key, self.value).context("writing secret to database") 
+        }
+    }
+
+    #[derive(Clap, Debug)]
+    pub struct Rot {
+        #[clap(name = "new-password")]
+        new_password: String,
+    }
+    impl Rot {
+        pub fn run<S: ::hips::Store>(self, mut store: S, db: String) -> Result<(), Error> {
+            let mut new_store = ::hips::EncryptedYaml::new(db, self.new_password);
+            for (name, secret) in store.all().context("listing secrets")? {
+                new_store.set(name, secret).context("adding secret to new store")?;
+            }
+            Ok(())
         }
     }
 
