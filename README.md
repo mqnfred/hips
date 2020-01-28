@@ -46,6 +46,11 @@ error: retrieving secret: decrypting secret: processing ciphertext: OpenSSL erro
 $ echo my-master-pw | hips -d secrets.yaml env --shell=/bin/bash
 #!/bin/bash
 export MY_SECRET='what-i-want-to-hide';
+
+$ echo my-master-pw | hips -d secrets.yaml del my_secret
+$ cat secrets.yaml
+---
+[]
 ```
 
 We expose four commands currently:
@@ -54,10 +59,7 @@ We expose four commands currently:
  - `get` read an existing secret
  - `rot` re-encrypts the whole database using a new password
  - `env` expose secrets as environment variables in a shell script
-
-While the first two are useful for management reasons, the last command is used
-when programs need to load those secrets into memory, which is conveniently
-done using environment variables.
+ - `del` remove a secret by name
 
 ## Safety
 
