@@ -2,7 +2,7 @@ use ::failure::Error;
 use ::std::collections::BTreeMap;
 use ::std::io::Write;
 
-pub type EncryptedYaml = stores::EncryptedStore<stores::YAML, encrypters::Magic>;
+pub type EncryptedYaml = stores::EncryptedStore<stores::YAML, encrypters::OpenSSL>;
 
 pub trait Store {
     fn set(&mut self, key: String, value: String) -> Result<(), Error>;
@@ -20,9 +20,9 @@ mod stores {
     use super::*;
 
     pub struct EncryptedStore<S: Store, E: Encrypter>(S, E);
-    impl EncryptedStore<YAML, encrypters::Magic> {
+    impl EncryptedStore<YAML, encrypters::OpenSSL> {
         pub fn new(path: String, master: String) -> Self {
-            Self(YAML::new(path), encrypters::Magic::new(master))
+            Self(YAML::new(path), encrypters::OpenSSL::new(master))
         }
     }
     impl<S: Store, E: Encrypter> Store for EncryptedStore<S, E> {
@@ -86,20 +86,58 @@ mod stores {
 mod encrypters {
     use super::*;
 
-    pub struct Magic(::magic_crypt::MagicCrypt);
-    impl Encrypter for Magic {
-        fn new(key: String) -> Self {
-            Self(::magic_crypt::new_magic_crypt!(&key, 256))
+    const IV_SIZE: usize = 12;
+    const TAG_SIZE: usize = 16;
+    const KEY_LEN: usize = 32;
+    const ITERATIONS: usize = 100_000;
+    pub struct OpenSSL {
+        password: String,
+    }
+    impl OpenSSL {
+        fn key(&self) -> Result<Vec<u8>, Error> {
+            let mut pbkdf2_hash = [0u8; KEY_LEN];
+            ::openssl::pkcs5::pbkdf2_hmac(
+                self.password.as_bytes(),
+                b"tacos hhhhhhhmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+                ITERATIONS,
+                ::openssl::hash::MessageDigest::sha256(),
+                &mut pbkdf2_hash,
+            )?;
+            Ok(pbkdf2_hash.to_vec())
+        }
+    }
+    impl Encrypter for OpenSSL {
+        fn new(password: String) -> Self {
+            Self { password }
         }
 
         fn encrypt(&mut self, value: &str) -> Result<String, Error> {
-            Ok(self.0.encrypt_str_to_base64(value))
+            let mut iv = vec![0; IV_SIZE];
+            ::openssl::rand::rand_bytes(&mut iv)?;
+            let mut tag = vec![0; TAG_SIZE];
+
+            let cipher = ::openssl::symm::Cipher::aes_256_gcm();
+            let ciphertext = ::openssl::symm::encrypt_aead(
+                cipher, &self.key()?, Some(&iv), &[], value.as_bytes(), &mut tag,
+            )?;
+
+            Ok(::base64::encode(
+                &iv.into_iter().chain(
+                    tag.into_iter()
+                ).chain(ciphertext.into_iter()).collect::<Vec<u8>>()
+            ))
         }
 
         fn decrypt(&mut self, value: &str) -> Result<String, Error> {
-            Ok(self.0.decrypt_base64_to_string(value).map_err(|_| {
-                ::failure::err_msg("failed_to_decrypt")
-            })?)
+            let value = ::base64::decode(value)?;
+            let iv = &value[..IV_SIZE];
+            let tag = &value[IV_SIZE..(IV_SIZE + TAG_SIZE)];
+            let ciphertext = &value[(IV_SIZE + TAG_SIZE)..];
+            Ok(::std::str::from_utf8(&::openssl::symm::decrypt_aead(
+                ::openssl::symm::Cipher::aes_256_gcm(),
+                &self.key()?, Some(&iv),
+                &[], &ciphertext, &tag,
+            )?)?.into())
         }
     }
 }
