@@ -50,8 +50,8 @@ We expose four commands currently:
 
  - `set` add/overwrite a new secret
  - `get` read an existing secret
- - `env` expose secrets as environment variables in a shell script
  - `rot` re-encrypts the whole database using a new password
+ - `env` expose secrets as environment variables in a shell script
 
 While the first two are useful for management reasons, the last command is used
 when programs need to load those secrets into memory, which is conveniently
