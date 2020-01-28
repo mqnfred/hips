@@ -80,6 +80,6 @@ and if possible, consult with a security engineer. We rely on openssl's
 password.
 
 If you know anything about brute-forcing those ciphers that I don't, please
-contact me. Also reach out if you have hindsight into malpractices or
+contact me. Also reach out if you have indsights into malpractices or
 untrustworthiness from the usual source code providers. I am open to being
 convinced that this is unsafe.
