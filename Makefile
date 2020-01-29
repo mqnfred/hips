@@ -1,4 +1,4 @@
 all:
 	cargo build --release
-	strip target/release/hips
-	mv target/release/hips hips
+	cp target/release/hips hips
+	strip hips
