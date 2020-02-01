@@ -43,7 +43,11 @@ what-i-want-to-hide
 $ echo bad-pw | hips -d secrets.yaml get my_secret
 error: retrieving secret: decrypting secret: processing ciphertext: OpenSSL error
 
-$ echo my-master-pw | hips -d secrets.yaml env --shell=/bin/bash
+$ echo my-master-pw | hips -d secrets.yaml all --template "\
+#!/bin/bash
+{{ for s in secrets }}
+export {s.name|capitalize}='{s.secret}';{{ if not @last }}\n{{ endif }}
+{{ endfor }}"
 #!/bin/bash
 export MY_SECRET='what-i-want-to-hide';
 
@@ -55,10 +59,10 @@ $ cat secrets.yaml
 
 We expose four commands currently:
 
+ - `all` print all secret/value using a template
  - `set` add/overwrite a new secret
  - `get` read an existing secret
  - `rot` re-encrypts the whole database using a new password
- - `env` expose secrets as environment variables in a shell script
  - `del` remove a secret by name
 
 ## Safety

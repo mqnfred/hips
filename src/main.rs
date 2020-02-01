@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate serde;
 
 use ::anyhow::{Context,Error};
 use ::hips::{Database,Secret};
@@ -26,7 +28,7 @@ fn run() -> Result<(), Error> {
         Command::Get(get) => get.run(db),
         Command::Set(set) => set.run(db),
         Command::Rot(rot) => rot.run(db, db_path, password),
-        Command::Env(env) => env.run(db),
+        Command::All(all) => all.run(db),
         Command::Del(del) => del.run(db),
     }
 }
@@ -49,10 +51,10 @@ enum Command {
     Set(commands::Set),
     #[clap(name = "rot", about = "Re-encrypt the whole database using a new password")]
     Rot(commands::Rot),
-    #[clap(name = "env", about = "Output scripts which load all secrets as environment variables")]
-    Env(commands::Env),
     #[clap(name = "del", about = "Remove the given secret from the database")]
     Del(commands::Del),
+    #[clap(name = "all", about = "Print all initializations, provide template")]
+    All(commands::All),
 }
 
 mod commands {
@@ -113,27 +115,6 @@ mod commands {
     }
 
     #[derive(Clap, Debug)]
-    pub struct Env {
-        #[clap(long = "shell")]
-        shell: Option<String>,
-    }
-    impl Env {
-        pub fn run(self, mut db: Database) -> Result<(), Error> {
-            let assignments = db.all().context("listing secrets")?.into_iter().map(|s| {
-                format!("export {}='{}';", s.name.to_uppercase(), s.secret)
-            }).collect::<Vec<String>>();
-
-            if let Some(shell) = self.shell {
-                writeln!(::std::io::stdout(), "#!{}", shell).context("writing shebang to stdout")?;
-            }
-            Ok(writeln!(
-                ::std::io::stdout(),
-                "{}", assignments.join("\n")
-            ).context("writing assignments to stdin")?)
-        }
-    }
-
-    #[derive(Clap, Debug)]
     pub struct Del {
         #[clap(name = "name")]
         name: String,
@@ -142,5 +123,42 @@ mod commands {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
             db.del(self.name)
         }
+    }
+
+    #[derive(Clap, Debug)]
+    pub struct All {
+        #[clap(
+            short = "t",
+            long = "template",
+            about = "Jinja-style template. You can iterate over secrets as such:\n\
+                {{ for secret in secrets }}\n\
+                {secret.name|capitalize}={secret.secret}\n\
+                {{ endfor }}\n\
+                For more features, see `tinytemplate` rust crate.",
+        )]
+        template: String,
+    }
+    impl All {
+        pub fn run(self, mut db: Database) -> Result<(), Error> {
+            let template = format!("\"{}\"", self.template);
+            let template = ::snailquote::unescape(&template)?;
+
+            let mut tt = ::tinytemplate::TinyTemplate::new();
+            tt.add_template("all", &template)?;
+            tt.add_formatter("capitalize", |val, s| match val {
+                ::serde_json::Value::String(string) => {
+                    s.push_str(&string.to_uppercase());
+                    Ok(())
+                }
+                _ => panic!("can only capitalize strings"),
+            });
+
+            let ctx = AllContext{secrets: db.all()?};
+            Ok(write!(::std::io::stdout(), "{}", tt.render("all", &ctx)?)?)
+        }
+    }
+    #[derive(Serialize)]
+    struct AllContext {
+        secrets: Vec<Secret>,
     }
 }

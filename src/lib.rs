@@ -1,5 +1,3 @@
-#![feature(trait_alias)]
-
 #[macro_use]
 extern crate serde;
 
@@ -7,6 +5,7 @@ use ::anyhow::{Context,Error};
 use ::std::io::Write;
 use ::std::path::PathBuf;
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Secret {
     pub name: String,
     pub secret: String,
