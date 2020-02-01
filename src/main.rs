@@ -45,14 +45,14 @@ struct Options {
 
 #[derive(Clap, Debug)]
 enum Command {
-    #[clap(name = "get", about = "Get the value for a given secret name")]
-    Get(commands::Get),
     #[clap(name = "set", about = "Set a secret to a given value")]
     Set(commands::Set),
-    #[clap(name = "rot", about = "Re-encrypt the whole database using a new password")]
-    Rot(commands::Rot),
+    #[clap(name = "get", about = "Get the value for a given secret name")]
+    Get(commands::Get),
     #[clap(name = "del", about = "Remove the given secret from the database")]
     Del(commands::Del),
+    #[clap(name = "rot", about = "Re-encrypt the whole database using a new password")]
+    Rot(commands::Rot),
     #[clap(name = "all", about = "Print all initializations, provide template")]
     All(commands::All),
 }
@@ -60,6 +60,21 @@ enum Command {
 mod commands {
     use ::std::io::Write;
     use super::*;
+
+    #[derive(Clap, Debug)]
+    pub struct Set {
+        #[clap(name = "name")]
+        name: String,
+        #[clap(name = "secret")]
+        secret: String,
+    }
+    impl Set {
+        pub fn run(self, mut db: Database) -> Result<(), Error> {
+            db.set(
+                Secret{name: self.name, secret: self.secret}
+            ).context("writing secret to database") 
+        }
+    }
 
     #[derive(Clap, Debug)]
     pub struct Get {
@@ -76,17 +91,13 @@ mod commands {
     }
 
     #[derive(Clap, Debug)]
-    pub struct Set {
+    pub struct Del {
         #[clap(name = "name")]
         name: String,
-        #[clap(name = "secret")]
-        secret: String,
     }
-    impl Set {
+    impl Del {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
-            db.set(
-                Secret{name: self.name, secret: self.secret}
-            ).context("writing secret to database") 
+            db.del(self.name)
         }
     }
 
@@ -111,17 +122,6 @@ mod commands {
                 new_db.set(secret).context("adding secret to new db")?;
             }
             Ok(())
-        }
-    }
-
-    #[derive(Clap, Debug)]
-    pub struct Del {
-        #[clap(name = "name")]
-        name: String,
-    }
-    impl Del {
-        pub fn run(self, mut db: Database) -> Result<(), Error> {
-            db.del(self.name)
         }
     }
 
