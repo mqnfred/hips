@@ -134,14 +134,21 @@ mod commands {
                 {{ for secret in secrets }}\n\
                 {secret.name|capitalize}={secret.secret}\n\
                 {{ endfor }}\n\
-                For more features, see `tinytemplate` rust crate.",
+                For more features, see `tinytemplate` rust crate.\n\
+                \n\
+                If the template given evaluates to a file, the\n\
+                template will be read from that file.",
         )]
         template: String,
     }
     impl All {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
-            let template = format!("\"{}\"", self.template);
-            let template = ::snailquote::unescape(&template)?;
+            let mut template = match ::std::fs::read_to_string(&self.template) {
+                Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok(self.template),
+                Err(err) => Err(err),
+                Ok(val) => Ok(val),
+            }?;
+            template = ::snailquote::unescape(&format!("\"{}\"", template))?;
 
             let mut tt = ::tinytemplate::TinyTemplate::new();
             tt.add_template("all", &template)?;
