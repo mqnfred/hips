@@ -53,12 +53,12 @@ impl Database {
         ).context("decrypting secret")
     }
 
-    pub fn del(&mut self, name: String) -> Result<(), Error> {
-        self.b.del(name).context("removing secret")
+    pub fn delete(&mut self, name: String) -> Result<(), Error> {
+        self.b.delete(name).context("removing secret")
     }
 
-    pub fn all(&mut self) -> Result<Vec<Secret>, Error> {
-        self.b.all().context("listing secrets")?.into_iter().map(|s| {
+    pub fn list(&mut self) -> Result<Vec<Secret>, Error> {
+        self.b.list().context("listing secrets")?.into_iter().map(|s| {
             self.e.decrypt(s)
         }).collect::<Result<Vec<Secret>, Error>>()
     }
@@ -67,8 +67,8 @@ impl Database {
 pub trait Backend {
     fn set(&mut self, encrypted: Encrypted) -> Result<(), Error>;
     fn get(&mut self, name: String) -> Result<Encrypted, Error>;
-    fn del(&mut self, name: String) -> Result<(), Error>;
-    fn all(&mut self) -> Result<Vec<Encrypted>, Error>;
+    fn delete(&mut self, name: String) -> Result<(), Error>;
+    fn list(&mut self) -> Result<Vec<Encrypted>, Error>;
 }
 mod backends {
     use super::*;
@@ -115,14 +115,14 @@ mod backends {
             }).map(|s| Ok(s)).unwrap_or_else(|| Err(Error::msg("secret not found")))
         }
 
-        fn del(&mut self, name: String) -> Result<(), Error> {
+        fn delete(&mut self, name: String) -> Result<(), Error> {
             let secrets = self.read().context("loading database")?.into_iter().filter(|s| {
                 s.name != name
             }).collect();
             self.write(secrets)
         }
 
-        fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
+        fn list(&mut self) -> Result<Vec<Encrypted>, Error> {
             self.read()
         }
     }
@@ -184,11 +184,11 @@ mod backends {
             })
         }
 
-        fn del(&mut self, name: String) -> Result<(), Error> {
+        fn delete(&mut self, name: String) -> Result<(), Error> {
             Ok(::std::fs::remove_dir_all(self.path.join(name))?)
         }
 
-        fn all(&mut self) -> Result<Vec<Encrypted>, Error> {
+        fn list(&mut self) -> Result<Vec<Encrypted>, Error> {
             ::std::fs::read_dir(&self.path).context(
                 "listing secret files"
             )?.collect::<Result<Vec<_>, _>>()?.into_iter().filter_map(|dir| {

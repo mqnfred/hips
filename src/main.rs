@@ -6,6 +6,7 @@ extern crate serde;
 use ::anyhow::{Context,Error};
 use ::hips::{Database,Secret};
 use ::std::io::{Read,Write};
+use ::std::iter::FromIterator;
 use ::std::path::PathBuf;
 use ::clap::Clap;
 
@@ -26,12 +27,11 @@ fn run() -> Result<(), Error> {
     let db = Database::new(db_path.clone(), password.clone())?;
 
     match opts.subcmd {
-        Command::Get(get) => get.run(db),
         Command::Set(set) => set.run(db),
-        Command::Del(del) => del.run(db),
-        Command::Rot(rot) => rot.run(db, db_path, password),
-        Command::Tmp(tmp) => tmp.run(db),
-        Command::All(all) => all.run(db),
+        Command::Get(get) => get.run(db),
+        Command::Delete(delete) => delete.run(db),
+        Command::Rotate(rotate) => rotate.run(db, db_path, password),
+        Command::Template(template) => template.run(db),
     }
 }
 
@@ -51,14 +51,12 @@ enum Command {
     Set(commands::Set),
     #[clap(name = "get", about = "Get the value for a given secret name")]
     Get(commands::Get),
-    #[clap(name = "del", about = "Remove the given secret from the database")]
-    Del(commands::Del),
-    #[clap(name = "rot", about = "Re-encrypt the whole database using a new password")]
-    Rot(commands::Rot),
-    #[clap(name = "tmp", about = "Get the value and insert it in a template")]
-    Tmp(commands::Tmp),
-    #[clap(name = "all", about = "Print all initializations, provide template")]
-    All(commands::All),
+    #[clap(name = "delete", about = "Remove the given secret from the database")]
+    Delete(commands::Delete),
+    #[clap(name = "rotate", about = "Re-encrypt the whole database using a new password")]
+    Rotate(commands::Rotate),
+    #[clap(name = "template", about = "Print one or multiple secrets according to a template")]
+    Template(commands::Template),
 }
 
 mod commands {
@@ -95,24 +93,24 @@ mod commands {
     }
 
     #[derive(Clap, Debug)]
-    pub struct Del {
+    pub struct Delete {
         #[clap(name = "name")]
         name: String,
     }
-    impl Del {
+    impl Delete {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
-            db.del(self.name)
+            db.delete(self.name)
         }
     }
 
     #[derive(Clap, Debug)]
-    pub struct Rot {
+    pub struct Rotate {
         #[clap(long = "new-password")]
         new_password: Option<String>,
         #[clap(long = "new-path")]
         new_path: Option<PathBuf>,
     }
-    impl Rot {
+    impl Rotate {
         pub fn run(
             self,
             mut existing_db: Database,
@@ -122,7 +120,7 @@ mod commands {
             let path = self.new_path.unwrap_or(existing_path);
             let pw = self.new_password.unwrap_or(existing_pw);
             let mut new_db = Database::new(path.into(), pw).context("spinning up new db")?;
-            for secret in existing_db.all().context("listing secrets")? {
+            for secret in existing_db.list().context("listing secrets")? {
                 new_db.set(secret).context("adding secret to new db")?;
             }
             Ok(())
@@ -130,25 +128,11 @@ mod commands {
     }
 
     #[derive(Clap, Debug)]
-    pub struct Tmp {
-        #[clap(name = "name")]
-        name: String,
-
-        #[clap(
-            short = "t",
-            long = "template",
-            about = "Jinja-style template. You can iterate over secrets as such:\n\
-                {{ for secret in secrets }}\n\
-                {secret.name|capitalize}={secret.secret}\n\
-                {{ endfor }}\n\
-                For more features, see `tinytemplate` rust crate.\n\
-                \n\
-                If the template given evaluates to a file, the\n\
-                template will be read from that file.",
-        )]
+    pub struct Template {
+        #[clap(name = "template", about = "File containing the template or template directly")]
         template: String,
     }
-    impl Tmp {
+    impl Template {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
             let mut template = match ::std::fs::read_to_string(&self.template) {
                 Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok(self.template),
@@ -158,7 +142,7 @@ mod commands {
             template = ::snailquote::unescape(&format!("\"{}\"", template))?;
 
             let mut tt = ::tinytemplate::TinyTemplate::new();
-            tt.add_template("tmp", &template)?;
+            tt.add_template("template", &template)?;
             tt.add_formatter("capitalize", |val, s| match val {
                 ::serde_json::Value::String(string) => {
                     s.push_str(&string.to_uppercase());
@@ -167,56 +151,19 @@ mod commands {
                 _ => panic!("can only capitalize strings"),
             });
 
-            let ctx = TmpContext{secret: db.get(self.name)?};
-            Ok(write!(::std::io::stdout(), "{}", tt.render("tmp", &ctx)?)?)
+            let secrets = db.list()?;
+            let ctx = TemplateContext{
+                list: secrets.clone(),
+                map: ::std::collections::HashMap::from_iter(secrets.into_iter().map(|secret| {
+                    (secret.name, secret.secret)
+                })),
+            };
+            Ok(write!(::std::io::stdout(), "{}", tt.render("template", &ctx)?)?)
         }
     }
     #[derive(Serialize)]
-    struct TmpContext {
-        secret: Secret,
-    }
-
-    #[derive(Clap, Debug)]
-    pub struct All {
-        #[clap(
-            short = "t",
-            long = "template",
-            about = "Jinja-style template. You can iterate over secrets as such:\n\
-                {{ for secret in secrets }}\n\
-                {secret.name|capitalize}={secret.secret}\n\
-                {{ endfor }}\n\
-                For more features, see `tinytemplate` rust crate.\n\
-                \n\
-                If the template given evaluates to a file, the\n\
-                template will be read from that file.",
-        )]
-        template: String,
-    }
-    impl All {
-        pub fn run(self, mut db: Database) -> Result<(), Error> {
-            let mut template = match ::std::fs::read_to_string(&self.template) {
-                Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok(self.template),
-                Err(err) => Err(err),
-                Ok(val) => Ok(val),
-            }?;
-            template = ::snailquote::unescape(&format!("\"{}\"", template))?;
-
-            let mut tt = ::tinytemplate::TinyTemplate::new();
-            tt.add_template("all", &template)?;
-            tt.add_formatter("capitalize", |val, s| match val {
-                ::serde_json::Value::String(string) => {
-                    s.push_str(&string.to_uppercase());
-                    Ok(())
-                }
-                _ => panic!("can only capitalize strings"),
-            });
-
-            let ctx = AllContext{secrets: db.all()?};
-            Ok(write!(::std::io::stdout(), "{}", tt.render("all", &ctx)?)?)
-        }
-    }
-    #[derive(Serialize)]
-    struct AllContext {
-        secrets: Vec<Secret>,
+    struct TemplateContext {
+        list: Vec<Secret>,
+        map: ::std::collections::HashMap<String, String>,
     }
 }
