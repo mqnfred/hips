@@ -11,13 +11,13 @@ manage files containing **encrypted** secrets.
 
 Most of the big shops out there need to roll out their secret managers, in part
 because they are higher-profile targets and because secrets cannot be tied to
-individuals anymore. You can probably find an AWS that does that.
+individuals anymore. You can probably find an AWS service that does that.
 
 For small shops who do not want to marry into any cloud provider however,
 tracking secrets is a weird exercise. We suggest tracking them alongside the
 code, which is possible thanks to the small scale.
 
-By treating secrets as code, we reduce the source of truths in our distributed
+By treating secrets as code, we reduce the sources of truth in our distributed
 systems by one. It also contributes to helping us design our infrastructure as
 code in our repo by making access to secrets easier. We'll call it minimalistic
 devops!
@@ -30,20 +30,20 @@ password concept is probably not sustainable past a certain amount of people.
 Let's look at what a typical secret management session might look like:
 
 ```shell
-$ echo my-master-pw | hips -d secrets.yaml set my_secret 'what-i-want-to-hide'
+$ echo -n my-master-pw | hips -d secrets.yaml set my_secret 'what-i-want-to-hide'
 $ cat secrets.yaml
 ---
 - name: my_secret
   secret: Laa9zkx4miBxwYI4DXHtZnbJkKjHk79goacgnZdlBObgu83zvlPuHPOYlQP34NE=
   salt: onr7n6KPvITeTWtbeKzgzKORC4yuTtrIZeG5mU53FZk=
 
-$ echo my-master-pw | hips -d secrets.yaml get my_secret
+$ echo -n my-master-pw | hips -d secrets.yaml get my_secret
 what-i-want-to-hide
 
-$ echo bad-pw | hips -d secrets.yaml get my_secret
+$ echo -n bad-pw | hips -d secrets.yaml get my_secret
 error: retrieving secret: decrypting secret: processing ciphertext: OpenSSL error
 
-$ echo my-master-pw | hips -d secrets.yaml all --template "\
+$ echo -n my-master-pw | hips -d secrets.yaml all --template "\
 #!/bin/bash
 {{ for s in secrets }}
 export {s.name|capitalize}='{s.secret}';{{ if not @last }}\n{{ endif }}
@@ -51,7 +51,7 @@ export {s.name|capitalize}='{s.secret}';{{ if not @last }}\n{{ endif }}
 #!/bin/bash
 export MY_SECRET='what-i-want-to-hide';
 
-$ echo my-master-pw | hips -d secrets.yaml del my_secret
+$ echo -n my-master-pw | hips -d secrets.yaml del my_secret
 $ cat secrets.yaml
 ---
 []
