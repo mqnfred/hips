@@ -3,12 +3,12 @@ extern crate clap;
 #[macro_use]
 extern crate serde;
 
-use ::anyhow::{Context,Error};
-use ::hips::{Database,Secret};
-use ::std::io::{Read,Write};
-use ::std::iter::FromIterator;
-use ::std::path::PathBuf;
-use ::clap::Clap;
+use anyhow::{Context, Error};
+use clap::Clap;
+use hips::{Database, Secret};
+use std::io::{Read, Write};
+use std::iter::FromIterator;
+use std::path::PathBuf;
 
 fn main() -> Result<(), Error> {
     if let Err(err) = run() {
@@ -53,15 +53,21 @@ enum Command {
     Get(commands::Get),
     #[clap(name = "delete", about = "Remove the given secret from the database")]
     Delete(commands::Delete),
-    #[clap(name = "rotate", about = "Re-encrypt the whole database using a new password")]
+    #[clap(
+        name = "rotate",
+        about = "Re-encrypt the whole database using a new password"
+    )]
     Rotate(commands::Rotate),
-    #[clap(name = "template", about = "Print one or multiple secrets according to a template")]
+    #[clap(
+        name = "template",
+        about = "Print one or multiple secrets according to a template"
+    )]
     Template(commands::Template),
 }
 
 mod commands {
-    use ::std::io::Write;
     use super::*;
+    use std::io::Write;
 
     #[derive(Clap, Debug)]
     pub struct Set {
@@ -72,9 +78,11 @@ mod commands {
     }
     impl Set {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
-            db.set(
-                Secret{name: self.name, secret: self.secret}
-            ).context("writing secret to database") 
+            db.set(Secret {
+                name: self.name,
+                secret: self.secret,
+            })
+            .context("writing secret to database")
         }
     }
 
@@ -86,9 +94,11 @@ mod commands {
     impl Get {
         pub fn run(self, mut db: Database) -> Result<(), Error> {
             Ok(writeln!(
-                ::std::io::stdout(), "{}",
+                ::std::io::stdout(),
+                "{}",
                 db.get(self.name).context("retrieving secret")?.secret,
-            ).context("writing secret to stdout")?)
+            )
+            .context("writing secret to stdout")?)
         }
     }
 
@@ -129,7 +139,10 @@ mod commands {
 
     #[derive(Clap, Debug)]
     pub struct Template {
-        #[clap(name = "template", about = "File containing the template or template directly")]
+        #[clap(
+            name = "template",
+            about = "File containing the template or template directly"
+        )]
         template: String,
     }
     impl Template {
@@ -152,13 +165,19 @@ mod commands {
             });
 
             let secrets = db.list()?;
-            let ctx = TemplateContext{
+            let ctx = TemplateContext {
                 list: secrets.clone(),
-                map: ::std::collections::HashMap::from_iter(secrets.into_iter().map(|secret| {
-                    (secret.name, secret.secret)
-                })),
+                map: ::std::collections::HashMap::from_iter(
+                    secrets
+                        .into_iter()
+                        .map(|secret| (secret.name, secret.secret)),
+                ),
             };
-            Ok(write!(::std::io::stdout(), "{}", tt.render("template", &ctx)?)?)
+            Ok(write!(
+                ::std::io::stdout(),
+                "{}",
+                tt.render("template", &ctx)?
+            )?)
         }
     }
     #[derive(Serialize)]
