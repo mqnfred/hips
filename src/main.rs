@@ -27,6 +27,7 @@ dispatchers! {
         Get: commands::Get,
         Remove: commands::Remove,
         Rotate: commands::Rotate,
+        Template: commands::Template,
     ],
 }
 
@@ -75,18 +76,17 @@ mod commands {
             new_password: String,
         },
 
-        /*
         #[clap(alias = "tmp", about = "Print one or multiple secrets according to a template")]
         Template(self, db: &mut hips::Database) -> Result<()> {
-            let mut template = match ::std::fs::read_to_string(&self.template) {
+            let template = match ::std::fs::read_to_string(&self.template) {
                 Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok(self.template),
                 Err(err) => Err(err),
                 Ok(val) => Ok(val),
             }?;
+            writeln!(::std::io::stdout(), "{}", db.template(template)?)?;
             Ok(())
         } struct {
             template: String,
         },
-        */
     }
 }
