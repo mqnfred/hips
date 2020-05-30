@@ -23,8 +23,8 @@ fn run() -> Result<(), Error> {
 dispatchers! {
     #[clap(author = "Louis Feuvrier, mqnfred@gmail.com")]
     Hips(self, _: &mut hips::Database) -> Result<()> [
-        Set: commands::Set,
-        Get: commands::Get,
+        Store: commands::Store,
+        Load: commands::Load,
         Remove: commands::Remove,
         Rotate: commands::Rotate,
         Template: commands::Template,
@@ -37,8 +37,8 @@ mod commands {
 
     commands! {
         #[clap(about = "Store provided secret under the provided name")]
-        Set(self, db: &mut hips::Database) -> Result<()> {
-            db.set(hips::Secret{name: self.name, secret: self.secret})
+        Store(self, db: &mut hips::Database) -> Result<()> {
+            db.store(hips::Secret{name: self.name, secret: self.secret})
         } struct {
             #[clap(about = "The name to store/hide the secret under")]
             name: String,
@@ -47,8 +47,8 @@ mod commands {
         },
 
         #[clap(about = "Retrieve secret under the provided name")]
-        Get(self, db: &mut hips::Database) -> Result<()> {
-            writeln!(::std::io::stdout(), "{}", db.get(self.name)?.secret)?;
+        Load(self, db: &mut hips::Database) -> Result<()> {
+            writeln!(::std::io::stdout(), "{}", db.load(self.name)?.secret)?;
             Ok(())
         } struct {
             #[clap(about = "The name to retrieve the secrets for")]
@@ -68,7 +68,7 @@ mod commands {
             let db_path = ::std::env::var("HIPS_DATABASE")?.into();
             let mut new_db = hips::Database::new(db_path, self.new_password)?;
             for secret in db.list()? {
-                new_db.set(secret)?;
+                new_db.store(secret)?;
             }
             Ok(())
         } struct {

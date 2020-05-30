@@ -17,8 +17,8 @@ pub struct Database {
 mod database;
 
 pub trait Backend {
-    fn set(&mut self, encrypted: Encrypted) -> Result<()>;
-    fn get(&mut self, name: String) -> Result<Encrypted>;
+    fn store(&mut self, encrypted: Encrypted) -> Result<()>;
+    fn load(&mut self, name: String) -> Result<Encrypted>;
     fn remove(&mut self, name: String) -> Result<()>;
     fn list(&mut self) -> Result<Vec<Encrypted>>;
 }

@@ -23,14 +23,14 @@ impl Database {
 }
 
 impl Database {
-    pub fn set(&mut self, secret: Secret) -> Result<()> {
+    pub fn store(&mut self, secret: Secret) -> Result<()> {
         let encrypted = self.e.encrypt(secret).context("encrypting secret")?;
-        self.b.set(encrypted).context("storing secret")
+        self.b.store(encrypted).context("storing secret")
     }
 
-    pub fn get(&mut self, name: String) -> Result<Secret> {
+    pub fn load(&mut self, name: String) -> Result<Secret> {
         self.e.decrypt(
-            self.b.get(name).context("looking up name")?
+            self.b.load(name).context("looking up name")?
         ).context("decrypting secret")
     }
 

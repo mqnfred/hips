@@ -25,7 +25,7 @@ impl YAML {
     }
 }
 impl Backend for YAML {
-    fn set(&mut self, encrypted: Encrypted) -> Result<()> {
+    fn store(&mut self, encrypted: Encrypted) -> Result<()> {
         let mut secrets = self.read().context("loading database")?;
         if let Some(existing_pos) = secrets.iter().position(|s| s.name == encrypted.name) {
             secrets.remove(existing_pos);
@@ -36,7 +36,7 @@ impl Backend for YAML {
         self.write(secrets).context("writing database")
     }
 
-    fn get(&mut self, name: String) -> Result<Encrypted> {
+    fn load(&mut self, name: String) -> Result<Encrypted> {
         self.read().context("loading database")?.into_iter().find(|s| {
             s.name == name
         }).map(|s| Ok(s)).unwrap_or_else(|| Err(Error::msg("secret not found")))
@@ -89,7 +89,7 @@ impl Folder {
     }
 }
 impl Backend for Folder {
-    fn set(&mut self, encrypted: Encrypted) -> Result<()> {
+    fn store(&mut self, encrypted: Encrypted) -> Result<()> {
         self.ensure_root(&encrypted.name)?;
 
         let mut salt_f = ::std::fs::OpenOptions::new().write(true).create(true)
@@ -101,7 +101,7 @@ impl Backend for Folder {
         Ok(secret_f.write_all(encrypted.secret.as_bytes())?)
     }
 
-    fn get(&mut self, name: String) -> Result<Encrypted> {
+    fn load(&mut self, name: String) -> Result<Encrypted> {
         let salt_path = self.salt_path(&name);
         let secret_path = self.secret_path(&name);
         Ok(Encrypted{
@@ -119,7 +119,7 @@ impl Backend for Folder {
         ::std::fs::read_dir(&self.path).context(
             "listing secret files"
         )?.collect::<Result<Vec<_>, _>>()?.into_iter().filter_map(|dir| {
-            dir.path().file_name().map(|fname| self.get(fname.to_str().unwrap().to_owned()))
+            dir.path().file_name().map(|fname| self.load(fname.to_str().unwrap().to_owned()))
         }).collect::<Result<Vec<_>>>()
     }
 }
