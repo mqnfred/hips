@@ -1,5 +1,7 @@
 # Hide in plain sight
 
+[![crates.io](https://img.shields.io/crates/v/hips)](https://crates.io/hips)
+
 `hips` is a small, self-contained utility that enables users to store their
 secrets encrypted alongside their code. What are you interested in knowing?
 
