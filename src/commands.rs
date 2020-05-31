@@ -1,4 +1,4 @@
-use ::modularcli::prelude::*;
+use ::clishe::prelude::*;
 use ::std::io::Write;
 
 commands! {

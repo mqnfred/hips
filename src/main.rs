@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate modularcli;
+extern crate clishe;
 
-use modularcli::prelude::*;
+use clishe::prelude::*;
 use ::std::io::Write;
 
 fn main() -> Result<()> {
