@@ -3,53 +3,27 @@
 `hips` is a small, self-contained utility that enables users to store their
 secrets encrypted alongside their code. What are you interested in knowing?
 
- 1. [Is this even safe](#safety)
- 2. [Why do this?](#benefits)
- 3. [Let's try it out](#install)
- 4. [Tutorial](#tutorial)
+ 1. [Why do this?](#philosophy)
+ 2. [Let's try it out](#install)
+ 3. [Tutorial](#tutorial)
+ 4. [Is this even safe](#safety)
 
-## Safety
+## Philosophy
 
-Everyone will not be comfortable with this. Storing your secrets encrypted next
-to your code means you need to trust the entity protecting your code in the
-first place.
+`me+code=secrets`
 
-I personally think that this is fine, and it is likely that anybody able to
-temper with my code without my noticing would thereby be able to get me to
-execute arbitrary things and ultimately get access to my production.
+For all the small shops out there, the low profile targets with a limited
+amount of individual developers involved, we suggest tracking your secrets
+alongside your code, in a file or folder "database."
 
-Ultimately, consider the following two characteristics:
+This will reduce sources of truth in our distributed system by 1 and help with
+"infrastructure as code" by making access to the secrets a local affair. You
+will not have to get married to some cloud provider's secret manager, you will
+not have to deploy an open-source solution yourself.
 
- - Your profile (are you a high-profile target? low-profile?)
- - Your threat-level (who do you accept to trust?)
-
-It is important to answer those questions before making any decision regarding
-security. If possible, consult with some engsec. On the technical side, we rely
-on openssl's `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
-from a password.
-
-If you know anything about brute-forcing those ciphers that I don't, please
-contact me. Also reach out if you have insights into malpractices or
-untrustworthiness from the usual source code providers. I am open to being
-convinced that this is unsafe.
-
-## Benefits
-
-Why? me+code=secrets. Most of the big shops out there need to roll out their
-secret managers, in part because they are higher-profile targets and because
-secrets cannot be tied to individuals anymore. You can probably find an AWS
-service that does that.
-
-For small shops who do not want to marry into any cloud provider however,
-tracking secrets is a weird exercise. We suggest tracking them alongside the
-code, which is possible thanks to the small scale.
-
-By treating secrets as code, we reduce the sources of truth in our distributed
-systems by one. We also contribute to helping design our infrastructure as code
-in our repo by making access to secrets easier.
-
-This will only be possible at a certain scale, as the master password concept
-is probably not sustainable past a certain amount of people.
+For teams with many developers, the master-password strategy does not scale
+well. For higher scale infrastructure and higher-profile shops, managed secrets
+will likely make more sense.
 
 ## Install
 
@@ -205,6 +179,26 @@ secrets
 $ cat secrets/aws_access_key_id/secret
 Sb8BznQqjYr+q+lis2uVKPZ/j+qmNIMuXbjr/MElIAYkupyUCGHPbY+N/NTpTxKr
 ```
+
+## Safety
+
+This is as safe as SSL and HTTPS. It uses the same encryption technologies and
+the same libraries. If you feel safe with SSL and HTTPS, you should, in theory
+at least, feel safe about storing encrypted secrets alongside your code.
+
+You might want to consider some burden of trust (in your threat-model) on the
+entity hosting your code, if you want to be conservative. This will not matter
+materially however when compared with the burden that lies with the encryption.
+
+Ultimately, consider the following two characteristics:
+
+ - Your profile (are you a high-profile target? low-profile?)
+ - Your threat-level (who do you accept to trust?)
+
+It is important to answer those questions before making any decision regarding
+security. If possible, consult with some engsec. On the technical side, we rely
+on openssl's `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
+from a password.
 
 [1]: https://crates.io
 [2]: https://crates.io/crates/tinytemplate
