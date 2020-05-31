@@ -187,13 +187,14 @@ export AWS_SECRET_ACCESS_KEY=UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh;
 Up until now, we have been using a yaml file as database. We support multiple
 formats however:
 
- - As a tree of files (no extension)
+ - As a directory hierarchy (no extension)
  - As a single yaml file (`.yaml` extension)
 
-If we were to store two secrets `aws_access_key_id` and `aws_secret_access_key`
-in a tree of files, the hierarchy would look like this:
+If we were to repeat the experiment above with a directory hierarchy, our
+database would look like this:
 
 ```
+$ tree secrets/
 secrets
 ├── aws_access_key_id/
 │   ├── salt
@@ -201,6 +202,8 @@ secrets
 └── aws_secret_access_key/
     ├── salt
     └── secret
+$ cat secrets/aws_access_key_id/secret
+Sb8BznQqjYr+q+lis2uVKPZ/j+qmNIMuXbjr/MElIAYkupyUCGHPbY+N/NTpTxKr
 ```
 
 [1]: https://crates.io
