@@ -72,7 +72,7 @@ mod commands {
             }
             Ok(())
         } struct {
-            #[clap(name = "new-password")]
+            #[clap(name = "new-password", about = "The password to re-encrypt the database with")]
             new_password: String,
         },
 
@@ -86,6 +86,7 @@ mod commands {
             writeln!(::std::io::stdout(), "{}", db.template(template)?)?;
             Ok(())
         } struct {
+            #[clap(about = "Template or path to file containing the template")]
             template: String,
         },
     }

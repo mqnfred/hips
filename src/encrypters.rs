@@ -1,33 +1,13 @@
 use crate::prelude::*;
 
-const IV_SIZE: usize = 12;
-const SALT_SIZE: usize = 32;
-const TAG_SIZE: usize = 16;
-const KEY_LEN: usize = 32;
-const ITERATIONS: usize = 100_000;
-
 pub struct OpenSSL {
     password: String,
 }
-
 impl OpenSSL {
     pub fn new(password: String) -> Self {
         Self { password }
     }
-
-    fn key(&self, salt: &[u8]) -> Result<Vec<u8>> {
-        let mut pbkdf2_hash = [0u8; KEY_LEN];
-        ::openssl::pkcs5::pbkdf2_hmac(
-            self.password.as_bytes(),
-            &salt,
-            ITERATIONS,
-            ::openssl::hash::MessageDigest::sha256(),
-            &mut pbkdf2_hash,
-        )?;
-        Ok(pbkdf2_hash.to_vec())
-    }
 }
-
 impl Encrypter for OpenSSL {
     fn encrypt(&mut self, secret: Secret) -> Result<Encrypted> {
         let mut iv = vec![0u8; IV_SIZE];
@@ -70,3 +50,21 @@ impl Encrypter for OpenSSL {
         })
     }
 }
+impl OpenSSL {
+    fn key(&self, salt: &[u8]) -> Result<Vec<u8>> {
+        let mut pbkdf2_hash = [0u8; KEY_LEN];
+        ::openssl::pkcs5::pbkdf2_hmac(
+            self.password.as_bytes(),
+            &salt,
+            ITERATIONS,
+            ::openssl::hash::MessageDigest::sha256(),
+            &mut pbkdf2_hash,
+        )?;
+        Ok(pbkdf2_hash.to_vec())
+    }
+}
+const IV_SIZE: usize = 12;
+const SALT_SIZE: usize = 32;
+const TAG_SIZE: usize = 16;
+const KEY_LEN: usize = 32;
+const ITERATIONS: usize = 100_000;

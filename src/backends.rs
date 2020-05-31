@@ -7,22 +7,6 @@ impl YAML {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
-
-    fn read(&mut self) -> Result<Vec<Encrypted>> {
-        Ok(::serde_yaml::from_str(&match ::std::fs::read_to_string(&self.path) {
-            Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok("[]".to_string()),
-            Err(err) => Err(err),
-            Ok(val) => Ok(val),
-        }.context("reading file")?).context("unmarshalling yaml")?)
-    }
-
-    fn write(&mut self, secrets: Vec<Encrypted>) -> Result<()> {
-        let mut f = ::std::fs::OpenOptions::new().write(true).create(true)
-            .truncate(true).open(&self.path).context("opening file")?;
-        Ok(f.write_all(
-            ::serde_yaml::to_string(&secrets).context("marshalling to yaml")?.as_bytes()
-        ).context("writing to file")?)
-    }
 }
 impl Backend for YAML {
     fn store(&mut self, encrypted: Encrypted) -> Result<()> {
@@ -53,6 +37,23 @@ impl Backend for YAML {
         self.read()
     }
 }
+impl YAML {
+    fn read(&mut self) -> Result<Vec<Encrypted>> {
+        Ok(::serde_yaml::from_str(&match ::std::fs::read_to_string(&self.path) {
+            Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok("[]".to_string()),
+            Err(err) => Err(err),
+            Ok(val) => Ok(val),
+        }.context("reading file")?).context("unmarshalling yaml")?)
+    }
+
+    fn write(&mut self, secrets: Vec<Encrypted>) -> Result<()> {
+        let mut f = ::std::fs::OpenOptions::new().write(true).create(true)
+            .truncate(true).open(&self.path).context("opening file")?;
+        Ok(f.write_all(
+            ::serde_yaml::to_string(&secrets).context("marshalling to yaml")?.as_bytes()
+        ).context("writing to file")?)
+    }
+}
 
 pub struct Folder {
     path: PathBuf,
@@ -60,32 +61,6 @@ pub struct Folder {
 impl Folder {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
-    }
-
-    fn ensure_root(&self, name: &str) -> Result<PathBuf> {
-        let root_path = self.path.join(name);
-        let root_md = match ::std::fs::metadata(&root_path) {
-            Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => {
-                ::std::fs::create_dir_all(&root_path)?;
-                ::std::fs::metadata(&root_path)?
-            }
-            Err(err) => return Err(err.into()),
-            Ok(md) => md,
-        };
-
-        if root_md.is_dir() {
-            Ok(root_path)
-        } else {
-            Err(Error::msg("secret path is invalid (should be a directory)"))
-        }
-    }
-
-    fn salt_path(&self, name: &str) -> PathBuf {
-        self.path.join(name).join("salt")
-    }
-
-    fn secret_path(&self, name: &str) -> PathBuf {
-        self.path.join(name).join("secret")
     }
 }
 impl Backend for Folder {
@@ -121,5 +96,32 @@ impl Backend for Folder {
         )?.collect::<Result<Vec<_>, _>>()?.into_iter().filter_map(|dir| {
             dir.path().file_name().map(|fname| self.load(fname.to_str().unwrap().to_owned()))
         }).collect::<Result<Vec<_>>>()
+    }
+}
+impl Folder {
+    fn ensure_root(&self, name: &str) -> Result<PathBuf> {
+        let root_path = self.path.join(name);
+        let root_md = match ::std::fs::metadata(&root_path) {
+            Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => {
+                ::std::fs::create_dir_all(&root_path)?;
+                ::std::fs::metadata(&root_path)?
+            }
+            Err(err) => return Err(err.into()),
+            Ok(md) => md,
+        };
+
+        if root_md.is_dir() {
+            Ok(root_path)
+        } else {
+            Err(Error::msg("secret path is invalid (should be a directory)"))
+        }
+    }
+
+    fn salt_path(&self, name: &str) -> PathBuf {
+        self.path.join(name).join("salt")
+    }
+
+    fn secret_path(&self, name: &str) -> PathBuf {
+        self.path.join(name).join("secret")
     }
 }
