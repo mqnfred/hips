@@ -77,7 +77,7 @@ $ export HIPS_PASSWORD=pw
 
 ### Store, Load and Remove
 
-Store takes a name and a secret and stores them in the database.
+`store` takes a name and a secret and stores them in the database.
 
 ```
 $ hips store aws_access_key_id BUIO1IXUAK3OQ9ACAHSX
@@ -93,7 +93,7 @@ $ cat secrets.yaml
 $ hips remove aws_access_key_id
 ```
 
-Load takes a name and prints out the matching secret.
+`load` takes a name and prints out the matching secret.
 
 ```
 $ hips load aws_access_key_id
@@ -102,7 +102,7 @@ $ hips load aws_secret_access_key
 UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh
 ```
 
-Remove takes a name and removes that secret from the database.
+`remove` (`rm`) takes a name and removes that secret from the database.
 
 ```
 $ hips store remove_me_soon unimportant-secret
@@ -118,8 +118,8 @@ $ cat secrets.yaml | grep name:
 
 ### Rotate
 
-You can rotate the secrets database in one command, re-encrypting everything
-using a different password.
+You can `rotate` (`rot`) the secrets database in one command, re-encrypting
+everything using a different password.
 
 ```
 $ cat secrets.yaml | grep secret:
@@ -190,8 +190,8 @@ formats however:
  - As a directory hierarchy (no extension)
  - As a single yaml file (`.yaml` extension)
 
-If we were to repeat the experiment above with a directory hierarchy, our
-database would look like this:
+If we were to repeat the experiment above with a directory hierarchy under
+`secrets/`, our database would look like this:
 
 ```
 $ tree secrets/
