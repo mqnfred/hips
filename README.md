@@ -10,23 +10,23 @@ secrets encrypted alongside their code. What are you interested in knowing?
 
 ## Safety
 
-Everyone will not be comfortable with this and that's ok. Storing your secrets
-encrypted next to your code means you need to trust the entity protecting your
-code in the first place.
+Everyone will not be comfortable with this. Storing your secrets encrypted next
+to your code means you need to trust the entity protecting your code in the
+first place.
 
 I personally think that this is fine, and it is likely that anybody able to
 temper with my code without my noticing would thereby be able to get me to
 execute arbitrary things and ultimately get access to my production.
 
-Ultimately, consider the following two questions:
+Ultimately, consider the following two characteristics:
 
  - Your profile (are you a high-profile target? low-profile?)
  - Your threat-level (who do you accept to trust?)
 
-It is important to answer those before making any decision regarding security,
-and if possible, consult with a security engineer. We rely on openssl's
-`aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key from a
-password.
+It is important to answer those questions before making any decision regarding
+security. If possible, consult with some engsec. On the technical side, we rely
+on openssl's `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
+from a password.
 
 If you know anything about brute-forcing those ciphers that I don't, please
 contact me. Also reach out if you have insights into malpractices or
@@ -45,12 +45,11 @@ tracking secrets is a weird exercise. We suggest tracking them alongside the
 code, which is possible thanks to the small scale.
 
 By treating secrets as code, we reduce the sources of truth in our distributed
-systems by one. It also contributes to helping us design our infrastructure as
-code in our repo by making access to secrets easier. We'll call it minimalistic
-devops!
+systems by one. We also contribute to helping design our infrastructure as code
+in our repo by making access to secrets easier.
 
-This might only be possible at a certain scale however, as the master
-password concept is probably not sustainable past a certain amount of people.
+This will only be possible at a certain scale, as the master password concept
+is probably not sustainable past a certain amount of people.
 
 ## Install
 
