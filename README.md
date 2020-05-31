@@ -14,9 +14,9 @@ secrets encrypted alongside their code. What are you interested in knowing?
 
 For all the small shops out there, the low profile targets with a limited
 amount of individual developers involved, we suggest tracking your secrets
-alongside your code, in a file or folder "database."
+alongside your code, in a file or folder database.
 
-This will reduce sources of truth in our distributed system by 1 and help with
+This will reduce sources of truth in your distributed system by 1 and help with
 "infrastructure as code" by making access to the secrets a local affair. You
 will not have to get married to some cloud provider's secret manager, you will
 not have to deploy an open-source solution yourself.
