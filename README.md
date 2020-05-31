@@ -5,7 +5,7 @@ secrets encrypted alongside their code. What are you interested in knowing?
 
  1. [Is this even safe](#safety)
  2. [Why do this?](#benefits)
- 3. [How do I install this thing](#install)
+ 3. [Let's try it out](#install)
  4. [Tutorial](#tutorial)
 
 ## Safety
@@ -35,11 +35,10 @@ convinced that this is unsafe.
 
 ## Benefits
 
-Why? me+code=secrets
-
-Most of the big shops out there need to roll out their secret managers, in part
-because they are higher-profile targets and because secrets cannot be tied to
-individuals anymore. You can probably find an AWS service that does that.
+Why? me+code=secrets. Most of the big shops out there need to roll out their
+secret managers, in part because they are higher-profile targets and because
+secrets cannot be tied to individuals anymore. You can probably find an AWS
+service that does that.
 
 For small shops who do not want to marry into any cloud provider however,
 tracking secrets is a weird exercise. We suggest tracking them alongside the
@@ -55,13 +54,12 @@ password concept is probably not sustainable past a certain amount of people.
 
 ## Install
 
-You will need [cargo][1] to install `hips`. The following
-snippet represents everything you need to start using it:
+You will need [cargo][1] to install `hips`. Once you have it, do the following:
 
 ```sh
-export PATH=$PATH:$HOME/.cargo/bin;
-cargo install hips;
-hips --help;
+export PATH=$PATH:$HOME/.cargo/bin
+cargo install hips
+hips --help
 ```
 
 ## Tutorial
@@ -96,7 +94,7 @@ $ cat secrets.yaml
 $ hips remove aws_access_key_id
 ```
 
-Load takes a name and prints out a secret.
+Load takes a name and prints out the matching secret.
 
 ```
 $ hips load aws_access_key_id
@@ -105,7 +103,7 @@ $ hips load aws_secret_access_key
 UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh
 ```
 
-Remove takes a name and remove that secret from the database.
+Remove takes a name and removes that secret from the database.
 
 ```
 $ hips store remove_me_soon unimportant-secret
@@ -138,23 +136,22 @@ BUIO1IXUAK3OQ9ACAHSX
 ```
 
 You can see here that the encrypted secrets and salt are different from the
-previous secrets.yaml database. We can now read all the secrets using the new
+previous `secrets.yaml` database. We can now read all the secrets using the new
 password.
 
 ### Template
 
 Many times when exporting secrets to production, they need to be displayed in a
-specific manner, as part of a configuration file and such.
-
-We use the [tiny template][2] library for this purpose. See their neat [syntax
-page][3] for more information. We will cover our templating capabilities in the
-following two examples.
+specific manner, as part of a configuration file and such. We use the [tiny
+template][2] library for this purpose. See their neat [syntax page][3] for more
+information. We will cover our templating capabilities in the following two
+examples.
 
 #### AWS credentials file
 
-Let's generate the usual `.aws/credentials`, where amazon secrets are
-conventionally stored. We'll use the "map" feature of the templating framework,
-which allows us to print out specific secrets by name.
+Let's generate the `.aws/credentials`, where amazon secrets are conventionally
+stored. We'll use the "map" feature of the templating framework, which allows
+us to print out specific secrets by name.
 
 ```
 $ hips template '[default]\naws_access_key_id={map.aws_access_key_id}\naws_secret_access_key={map.aws_secret_access_key}'
@@ -163,8 +160,6 @@ aws_access_key_id=BUIO1IXUAK3OQ9ACAHSX
 aws_secret_access_key=UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh
 ```
 
-The object you can use as a map is called `map`.
-
 #### Shell script loading all secrets
 
 This time, since our template is a bit more complex, we'll store it in a file:
@@ -172,12 +167,13 @@ This time, since our template is a bit more complex, we'll store it in a file:
 ```
 $ cat shell-template
 #!/bin/sh
-{{- for secret in list }}
+{{ for secret in list -}}
+{{- if not @first }}\n{{ endif -}}
 export {secret.name|capitalize}={secret.secret};
-{{- endfor }}
+{{- endfor -}}
 ```
 
-The object you can use as a list is called `list`. This will yield the
+You can find more information about this syntax [here][3]. This will yield the
 following shell script:
 
 ```
@@ -185,7 +181,6 @@ $ hips template shell-template
 #!/bin/sh
 export AWS_ACCESS_KEY_ID=BUIO1IXUAK3OQ9ACAHSX;
 export AWS_SECRET_ACCESS_KEY=UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh;
-
 ```
 
 ### Database formats
