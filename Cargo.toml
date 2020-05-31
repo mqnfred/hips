@@ -11,7 +11,7 @@ anyhow = "^1"
 base64 = "^0"
 # TODO: once published to crates.io, use 3.0.0 there
 clap = { git = "https://github.com/clap-rs/clap/" }
-clishe = { path = "../clishe" }
+clishe = "^0"
 openssl = { version = "0.10", features = ["vendored"] }
 paste = "^0"
 serde = { version = "1.0", features = ["derive"] }
