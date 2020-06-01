@@ -7,7 +7,7 @@ repository = "https://github.com/mqnfred/hips"
 description = "Store your production secrets alongside your code in a safe way"
 categories = ["command-line-utilities", "cryptography"]
 keywords = ["secrets", "manager", "database", "encryption"]
-version = "0.2.1-alpha.0"
+version = "0.3.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

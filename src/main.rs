@@ -24,7 +24,7 @@ dispatchers! {
         name = "hips",
         about = "Manage secrets alongside your code",
         author = "Louis Feuvrier <mqnfred@gmail.com>",
-        version = "0.2.0",
+        version = "0.3.0",
         after_help = "\
             ENVIRONMENT:\n    \
             HIPS_DATABASE\tfile/folder containing the secrets (mandatory)\n    \
