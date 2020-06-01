@@ -20,12 +20,17 @@ alongside your code, in a file or folder database.
 
 This will reduce sources of truth in your distributed system by 1 and help with
 "infrastructure as code" by making access to the secrets a local affair. You
-will not have to get married to some cloud provider's secret manager, you will
-not have to deploy an open-source solution yourself.
+will not have to depend on any kind of remote infrastructure for your secrets.
 
-For teams with many developers, the master-password strategy does not scale
-well. For higher scale infrastructure and higher-profile shops, managed secrets
-will likely make more sense.
+This solution will not work well for you if you:
+
+ - Have many developers (master-password strategy does not scale well)
+ - High profile shops (might need guarantees/insurance from cloud provider)
+ 
+In this database, you could store your AWS credentials or the ssh key you use to
+connect to your production. You could store secrets needed by your API to auth
+itself with your database and push those using a tool like ansible or ssh
+itself.
 
 ## Install
 
