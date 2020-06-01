@@ -21,10 +21,10 @@ fn run() -> Result<()> {
 
 dispatchers! {
     #[clap(
-        name = "hips",
-        about = "Manage secrets alongside your code",
-        author = "Louis Feuvrier <mqnfred@gmail.com>",
-        version = "0.3.0-alpha.0",
+        name = env!("CARGO_PKG_NAME"),
+        about = env!("CARGO_PKG_DESCRIPTION"),
+        author = env!("CARGO_PKG_AUTHORS"),
+        version = env!("CARGO_PKG_VERSION"),
         after_help = "\
             ENVIRONMENT:\n    \
             HIPS_DATABASE\tfile/folder containing the secrets (mandatory)\n    \
