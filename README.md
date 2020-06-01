@@ -25,12 +25,13 @@ will not have to depend on any kind of remote infrastructure for your secrets.
 This solution will not work well for you if you:
 
  - Have many developers (master-password strategy does not scale well)
- - High profile shops (might need guarantees/insurance from cloud provider)
+ - High scale/complexity infra (a need for secrets as a service)
+ - High profile shops (compliance reasons, need insurances)
  
-In this database, you could store your AWS credentials or the ssh key you use to
-connect to your production. You could store secrets needed by your API to auth
-itself with your database and push those using a tool like ansible or ssh
-itself.
+In this database, you could store your AWS credentials or the ssh key you use
+to connect to your production. You could store secrets needed by your serving
+layer to authenticate with your database and push those using a tool like
+ansible or ssh.
 
 ## Install
 
@@ -203,8 +204,8 @@ Ultimately, consider the following two characteristics:
 
 It is important to answer those questions before making any decision regarding
 security. If possible, consult with some engsec. On the technical side, we rely
-on [ring][4]'s `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
-from a password.
+on [ring][4]'s `pbkdf2` to derive a proper key from a password and its `aes256`
+implementation to encrypt/decrypt the secrets.
 
 [1]: https://crates.io
 [2]: https://crates.io/crates/tinytemplate
