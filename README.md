@@ -66,7 +66,6 @@ $ cat secrets.yaml
 - name: aws_secret_access_key
   secret: asrhBl8bMTPGj8Cua6LzyseRBLmhmNrivaCjW53NcNRUyKSYOkoLdq9PHSPHKdgosO6/acOn3hv+vnkciwLj0tio0ac=
   salt: 4GP2GtoRhaf6NKtanBm9aLjUefuNH+otFDFfHF1Utns=%
-$ hips remove aws_access_key_id
 ```
 
 `load` takes a name and prints out the matching secret.
