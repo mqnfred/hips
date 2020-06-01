@@ -203,9 +203,10 @@ Ultimately, consider the following two characteristics:
 
 It is important to answer those questions before making any decision regarding
 security. If possible, consult with some engsec. On the technical side, we rely
-on openssl's `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
+on [ring][4]'s `aes256` to encrypt/decrypt and `pbkdf2` to derive a proper key
 from a password.
 
 [1]: https://crates.io
 [2]: https://crates.io/crates/tinytemplate
 [3]: https://docs.rs/tinytemplate/1.0.4/tinytemplate/syntax/index.html
+[4]: https://github.com/briansmith/ring

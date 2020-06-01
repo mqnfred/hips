@@ -8,7 +8,7 @@ impl Database {
             if extension == "yaml" {
                 Ok(Database{
                     b: Box::new(crate::backends::YAML::new(path)),
-                    e: Box::new(crate::encrypters::OpenSSL::new(password)),
+                    e: Box::new(crate::encrypters::Ring::new(password)),
                 })
             } else {
                 Err(Error::msg(format!("unsupported format: {}", extension.to_str().unwrap())))
@@ -16,7 +16,7 @@ impl Database {
         } else {
             Ok(Database{
                 b: Box::new(crate::backends::Folder::new(path)),
-                e: Box::new(crate::encrypters::OpenSSL::new(password)),
+                e: Box::new(crate::encrypters::Ring::new(password)),
             })
         }
     }
