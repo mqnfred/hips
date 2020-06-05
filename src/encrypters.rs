@@ -93,7 +93,7 @@ impl Encrypter for Ring {
 
         Ok(Secret {
             name: encrypted.name,
-            secret: ::std::str::from_utf8(&secret)
+            secret: ::std::str::from_utf8(&secret[..(secret.len() - TAG_SIZE)])
                 .context("loading as utf8")?
                 .to_owned(),
         })
