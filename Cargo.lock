@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "hips"
-version = "0.3.3-alpha.0"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "base64",
