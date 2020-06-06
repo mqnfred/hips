@@ -189,25 +189,26 @@ Sb8BznQqjYr+q+lis2uVKPZ/j+qmNIMuXbjr/MElIAYkupyUCGHPbY+N/NTpTxKr
 
 ## Safety
 
-This is as safe as SSL and HTTPS. It uses the same encryption technologies and
-the same libraries. If you feel safe with SSL and HTTPS, you should, in theory
-at least, feel safe about storing encrypted secrets alongside your code.
+This project is using [ring][4]'s `pbkdf2` function to derive a proper key from
+a password and its `aes256` implementation to encrypt/decrypt the secrets. In
+theory at least, those ciphers should not be brute-forceable.
 
-You might want to consider some burden of trust (in your threat-model) on the
-entity hosting your code, if you want to be conservative. This will not matter
-materially however when compared with the burden that lies with the encryption.
+With this being said, it is still important to protect the encrypted version of
+our secrets from being public. If you store your secrets alongside your code,
+that responsibility then befalls your code provider (github for example.)
 
 Ultimately, consider the following two characteristics:
 
- - Your profile (are you a high-profile target? low-profile?)
- - Your threat-level (who do you accept to trust?)
+ - Your profile (low-profile target, high-profile?)
+ - Your threat-model (who do you accept to trust?)
+ - Your compliance requirements (do you have [PII][5] data?)
 
-It is important to answer those questions before making any decision regarding
-security. If possible, consult with some engsec. On the technical side, we rely
-on [ring][4]'s `pbkdf2` to derive a proper key from a password and its `aes256`
-implementation to encrypt/decrypt the secrets.
+You need to consider all those questions (and more) before deciding on a
+solution for your secrets management. It is advised that you consult with a
+security engineer as well.
 
 [1]: https://crates.io
 [2]: https://crates.io/crates/tinytemplate
 [3]: https://docs.rs/tinytemplate/1.0.4/tinytemplate/syntax/index.html
 [4]: https://github.com/briansmith/ring
+[5]: https://en.wikipedia.org/wiki/Personal_data
