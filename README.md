@@ -191,7 +191,8 @@ Sb8BznQqjYr+q+lis2uVKPZ/j+qmNIMuXbjr/MElIAYkupyUCGHPbY+N/NTpTxKr
 
 This project is using [ring][4]'s `pbkdf2` function to derive a proper key from
 a password and its `aes256` implementation to encrypt/decrypt the secrets. In
-theory at least, those ciphers should not be brute-forceable.
+theory at least, those ciphers should not be brute-forceable. You can find an
+audit of the ring library by Cure53 [here][6].
 
 With this being said, it is still important to protect the encrypted version of
 our secrets from being public. If you store your secrets alongside your code,
@@ -212,3 +213,4 @@ security engineer as well.
 [3]: https://docs.rs/tinytemplate/1.0.4/tinytemplate/syntax/index.html
 [4]: https://github.com/briansmith/ring
 [5]: https://en.wikipedia.org/wiki/Personal_data
+[6]: https://github.com/ctz/rustls/blob/master/audit/TLS-01-report.pdf
