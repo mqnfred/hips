@@ -32,7 +32,7 @@ commands! {
     #[clap(alias = "rot", about = "Re-encrypt the whole database using a new password")]
     Rotate(self, db: &mut hips::Database) -> Result<()> {
         let db_path = ::std::env::var("HIPS_DATABASE")?.into();
-        let mut new_db = hips::Database::new(db_path, self.new_password)?;
+        let mut new_db = hips::Database::from_file(db_path, self.new_password)?;
         for secret in db.list()? {
             new_db.store(secret)?;
         }
