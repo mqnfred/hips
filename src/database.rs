@@ -3,41 +3,55 @@ use ::std::convert::TryFrom;
 use crate::prelude::*;
 
 impl Database {
-    pub fn new(path: PathBuf, password: String) -> Result<Self> {
+    /// Instantiate a new `Database` with injected `Backend`/`Encrypter`.
+    pub fn new(backend: Box<crate::Backend>, encrypter: Box<crate::Encrypter>) -> Self {
+        Self{b: backend, e: encrypter}
+    }
+
+    /// Instantiate a new `Database` from a file.
+    ///
+    /// This function will try to guess which database type is needed, and create the appropriate
+    /// backend based on that. This is used in the binary, which supports only the `Backend`s and
+    /// `Encrypter`s shipped with hips.
+    pub fn from_file(path: PathBuf, password: String) -> Result<Self> {
         if let Some(extension) = path.extension() {
             if extension == "yaml" {
-                Ok(Database{
-                    b: Box::new(crate::backends::YAML::new(path)),
-                    e: Box::new(crate::encrypters::Ring::new(password)),
-                })
+                Ok(Self::new(
+                    Box::new(crate::backends::YAML::new(path)),
+                    Box::new(crate::encrypters::Ring::new(password)),
+                ))
             } else {
                 Err(Error::msg(format!("unsupported format: {}", extension.to_str().unwrap())))
             }
         } else {
-            Ok(Database{
+            Ok(Self::new(
                 b: Box::new(crate::backends::Folder::new(path)),
                 e: Box::new(crate::encrypters::Ring::new(password)),
-            })
+            ))
         }
     }
 }
 
 impl Database {
+    /// Store the provided secret.
     pub fn store(&mut self, secret: Secret) -> Result<()> {
         let encrypted = self.e.encrypt(secret).context("encrypting secret")?;
         self.b.store(encrypted).context("storing secret")
     }
 
+    /// Load the `name` secret.
     pub fn load(&mut self, name: String) -> Result<Secret> {
         self.e.decrypt(
             self.b.load(name).context("looking up name")?
         ).context("decrypting secret")
     }
 
+    /// Remove the `name` secret.
     pub fn remove(&mut self, name: String) -> Result<()> {
         self.b.remove(name).context("removing secret")
     }
 
+    /// List all secrets.
     pub fn list(&mut self) -> Result<Vec<Secret>> {
         self.b.list().context("listing secrets")?.into_iter().map(|s| {
             self.e.decrypt(s)
@@ -46,6 +60,14 @@ impl Database {
 }
 
 impl Database {
+    /// Process the database through a template.
+    ///
+    /// This call will read the provided `template` and replace all references to secrets with the
+    /// secrets stored in the database. We use the [tinytemplate][1] engine, see their [syntax
+    /// page][2] for more context.
+    ///
+    /// [1]: https://crates.io/crates/tinytemplate
+    /// [2]: https://docs.rs/tinytemplate/1.0.4/tinytemplate/syntax/index.html
     pub fn template(&mut self, mut template: String) -> Result<String> {
         template = ::snailquote::unescape(&format!("\"{}\"", template))?;
 

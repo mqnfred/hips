@@ -1,5 +1,18 @@
+//! [`Backend`][1] trait implementations.
+//!
+//! [1]: ../trait.Backend.html
+
 use crate::prelude::*;
 
+/// Store secrets in yaml format.
+///
+/// We store a list of encrypted secrets, each entry containing:
+///
+///  - name
+///  - secret (encrypted, base64)
+///  - salt (base64)
+///
+/// This `Backend` will be selected by the binary if the given database path ends with `.yaml`.
 pub struct YAML {
     path: PathBuf,
 }
@@ -55,6 +68,15 @@ impl YAML {
     }
 }
 
+/// Store the secrets in a directory hierarchy.
+///
+/// The path points to the main folder, which is created by the library. A sub-folder named after
+/// the secret entry is created for each secret, with the following files inside it:
+///
+///  - secret (encrypted, base64)
+///  - salt (base64)
+///
+/// This `Backend` will be selected by the binary if the given database path has no extension.
 pub struct Folder {
     path: PathBuf,
 }

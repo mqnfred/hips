@@ -1,3 +1,7 @@
+//! [`Encrypter`][1] trait implementations.
+//!
+//! [1]: ../trait.Encrypter.html
+
 use crate::prelude::*;
 use ring::rand::SecureRandom;
 use std::convert::TryInto;
@@ -8,9 +12,16 @@ const TAG_SIZE: usize = 16;
 const KEY_LEN: usize = 32;
 const ITERATIONS: usize = 100_000;
 
+/// Encrypt using the [ring][1] library.
+///
+/// The key is generated from the password provided at initialization using the PBKDF2 scheme.
+/// The cipher we use is AES256 GCM with 100,000 iterations.
+///
+/// [1]: https://github.com/briansmith/ring
 pub struct Ring(String);
 
 impl Ring {
+    /// Instantiate a new `Encrypter` based on the ring library.
     pub fn new(password: String) -> Self {
         Self(password)
     }

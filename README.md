@@ -3,7 +3,8 @@
 [![crates.io](https://img.shields.io/crates/v/hips)](https://crates.io/hips)
 
 `hips` is a small, self-contained utility that enables users to store their
-secrets encrypted alongside their code. What are you interested in knowing?
+secrets encrypted alongside their code. It can be used as a binary or a
+[library][7] depending on your needs. What are you interested in knowing?
 
  1. [Why do this?](#philosophy)
  2. [Let's try it out](#install)
@@ -214,3 +215,4 @@ security engineer as well.
 [4]: https://github.com/briansmith/ring
 [5]: https://en.wikipedia.org/wiki/Personal_data
 [6]: https://github.com/ctz/rustls/blob/master/audit/TLS-01-report.pdf
+[7]: https://docs.rs/hips

@@ -16,7 +16,7 @@ fn main() -> Result<()> {
 fn run() -> Result<()> {
     let db_path = unwrap_env_var("HIPS_DATABASE")?.into();
     let password = unwrap_env_var("HIPS_PASSWORD")?;
-    Hips::parse().run(&mut ::hips::Database::new(db_path, password)?)
+    Hips::parse().run(&mut ::hips::Database::from_file(db_path, password)?)
 }
 
 dispatchers! {
