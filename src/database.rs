@@ -1,11 +1,14 @@
-use ::std::iter::FromIterator;
-use ::std::convert::TryFrom;
 use crate::prelude::*;
+use ::std::convert::TryFrom;
+use ::std::iter::FromIterator;
 
 impl Database {
     /// Instantiate a new `Database` with injected `Backend`/`Encrypter`.
     pub fn new(backend: Box<dyn crate::Backend>, encrypter: Box<dyn crate::Encrypter>) -> Self {
-        Self{b: backend, e: encrypter}
+        Self {
+            b: backend,
+            e: encrypter,
+        }
     }
 
     /// Instantiate a new `Database` from a file.
@@ -21,7 +24,10 @@ impl Database {
                     Box::new(crate::encrypters::Ring::new(password)),
                 ))
             } else {
-                Err(Error::msg(format!("unsupported format: {}", extension.to_str().unwrap())))
+                Err(Error::msg(format!(
+                    "unsupported format: {}",
+                    extension.to_str().unwrap()
+                )))
             }
         } else {
             Ok(Self::new(
@@ -41,9 +47,9 @@ impl Database {
 
     /// Load the `name` secret.
     pub fn load(&mut self, name: String) -> Result<Secret> {
-        self.e.decrypt(
-            self.b.load(name).context("looking up name")?
-        ).context("decrypting secret")
+        self.e
+            .decrypt(self.b.load(name).context("looking up name")?)
+            .context("decrypting secret")
     }
 
     /// Remove the `name` secret.
@@ -53,9 +59,12 @@ impl Database {
 
     /// List all secrets.
     pub fn list(&mut self) -> Result<Vec<Secret>> {
-        self.b.list().context("listing secrets")?.into_iter().map(|s| {
-            self.e.decrypt(s)
-        }).collect::<Result<Vec<Secret>>>()
+        self.b
+            .list()
+            .context("listing secrets")?
+            .into_iter()
+            .map(|s| self.e.decrypt(s))
+            .collect::<Result<Vec<Secret>>>()
     }
 }
 
@@ -96,7 +105,7 @@ impl ::std::convert::TryFrom<&mut Database> for TemplateContext {
     type Error = Error;
     fn try_from(db: &mut Database) -> Result<Self> {
         let secrets = db.list()?;
-        Ok(Self{
+        Ok(Self {
             list: secrets.clone(),
             map: ::std::collections::HashMap::from_iter(
                 secrets

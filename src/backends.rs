@@ -16,6 +16,7 @@ use crate::prelude::*;
 pub struct YAML {
     path: PathBuf,
 }
+
 impl YAML {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
