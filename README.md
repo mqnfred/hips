@@ -1,6 +1,6 @@
 # Hide in plain sight
 
-[![crates.io](https://img.shields.io/crates/v/hips)](https://crates.io/hips)
+[![crates.io](https://img.shields.io/crates/v/hips)](https://crates.io/crates/hips)
 
 `hips` is a small, self-contained utility that enables users to store their
 secrets encrypted alongside their code. It can be used as a binary or a
@@ -199,7 +199,7 @@ With this being said, it is still important to protect the encrypted version of
 our secrets from being public. If you store your secrets alongside your code,
 that responsibility then befalls your code provider (github for example.)
 
-Ultimately, consider the following two characteristics:
+Ultimately, consider the following three characteristics:
 
  - Your profile (low-profile target, high-profile?)
  - Your threat-model (who do you accept to trust?)
