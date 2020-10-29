@@ -21,12 +21,34 @@ commands! {
         name: String,
     },
 
+    #[clap(alias = "ls", about = "List all available secrets")]
+    List(self, db: &mut hips::Database) -> Result<()> {
+        let mut names = db.list()?.into_iter().map(|secret| {
+            secret.name
+        }).collect::<Vec<String>>();
+        names.sort();
+        writeln!(::std::io::stdout(), "{}", names.join("\n"))?;
+        Ok(())
+    } struct {},
+
     #[clap(alias = "rm", about = "Remove the secret under the provided name")]
     Remove(self, db: &mut hips::Database) -> Result<()> {
         db.remove(self.name)
     } struct {
         #[clap(about = "The name to retrieve the secrets for")]
         name: String,
+    },
+
+    #[clap(about = "Rename the secret to the provided name")]
+    Rename(self, db: &mut hips::Database) -> Result<()> {
+        let secret = db.load(self.current_name.clone())?;
+        db.store(hips::Secret{name: self.new_name, secret: secret.secret})?;
+        db.remove(self.current_name)
+    } struct {
+        #[clap(about = "Current name of the secret to move")]
+        current_name: String,
+        #[clap(about = "New name of the secret")]
+        new_name: String,
     },
 
     #[clap(alias = "rot", about = "Re-encrypt the whole database using a new password")]

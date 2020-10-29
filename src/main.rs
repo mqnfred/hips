@@ -27,14 +27,16 @@ dispatchers! {
         version = env!("CARGO_PKG_VERSION"),
         after_help = "\
             ENVIRONMENT:\n    \
-            HIPS_DATABASE\tfile/folder containing the secrets (mandatory)\n    \
-            HIPS_PASSWORD\tpassword that will unlock the database (mandatory)\
+            HIPS_DATABASE    File/folder containing the secrets (mandatory)\n    \
+            HIPS_PASSWORD    Password that will unlock the database (mandatory)\
         ",
     )]
     Hips(self, _: &mut hips::Database) -> Result<()> [
         Store: commands::Store,
         Load: commands::Load,
+        List: commands::List,
         Remove: commands::Remove,
+        Rename: commands::Rename,
         Rotate: commands::Rotate,
         Template: commands::Template,
     ],
