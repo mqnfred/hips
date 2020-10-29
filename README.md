@@ -58,7 +58,7 @@ $ export HIPS_DATABASE=secrets.yaml
 $ export HIPS_PASSWORD=pw
 ```
 
-### Store, Load and Remove
+### Store, Load, List, Remove, Rename
 
 `store` takes a name and a secret and stores them in the database.
 
@@ -84,18 +84,41 @@ $ hips load aws_secret_access_key
 UwioixhaklufhhWbaXoSLwbxb2dj7/AJs92bdsXh
 ```
 
+`list` prints the names of the secrets stored in the db sorted alphabetically.
+
+```
+$ hips ls
+aws_access_key_id
+aws_secret_access_key
+```
+
 `remove` (`rm`) takes a name and removes that secret from the database.
 
 ```
 $ hips store remove_me_soon unimportant-secret
-$ cat secrets.yaml | grep name:
-- name: aws_access_key_id
-- name: aws_secret_access_key
-- name: remove_me_soon
+$ hips ls
+aws_access_key_id
+aws_secret_access_key
+remove_me_soon
 $ hips remove remove_me_soon
-$ cat secrets.yaml | grep name:
-- name: aws_access_key_id
-- name: aws_secret_access_key
+$ hips ls
+aws_access_key_id
+aws_secret_access_key
+```
+
+`rename` renames a secret based on a (orig, dest) name pair
+
+```
+$ hips store move_me_please unimportant-secret
+$ hips ls
+aws_access_key_id
+aws_secret_access_key
+move_me_please
+$ hips rename move_me_please thats_better
+$ hips ls
+aws_access_key_id
+aws_secret_access_key
+thats_better
 ```
 
 ### Rotate
