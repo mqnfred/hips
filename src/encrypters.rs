@@ -40,7 +40,7 @@ impl Ring {
 }
 
 impl Encrypter for Ring {
-    fn encrypt(&mut self, secret: Secret) -> Result<Encrypted> {
+    fn encrypt(&self, secret: Secret) -> Result<Encrypted> {
         assert_eq!(::ring::aead::AES_256_GCM.tag_len(), TAG_SIZE);
 
         let plaintext = ::ring::aead::Aad::empty();
@@ -81,7 +81,7 @@ impl Encrypter for Ring {
         })
     }
 
-    fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret> {
+    fn decrypt(&self, encrypted: Encrypted) -> Result<Secret> {
         let plaintext = ::ring::aead::Aad::empty();
         let mut ciphertext = ::base64::decode(&encrypted.secret).context("decoding ciphertext")?;
 

@@ -34,7 +34,7 @@ impl Backend for YAML {
         self.write(secrets).context("writing database")
     }
 
-    fn load(&mut self, name: String) -> Result<Encrypted> {
+    fn load(&self, name: String) -> Result<Encrypted> {
         self.read().context("loading database")?.into_iter().find(|s| {
             s.name == name
         }).map(|s| Ok(s)).unwrap_or_else(|| Err(Error::msg("secret not found")))
@@ -47,12 +47,12 @@ impl Backend for YAML {
         self.write(secrets)
     }
 
-    fn list(&mut self) -> Result<Vec<Encrypted>> {
+    fn list(&self) -> Result<Vec<Encrypted>> {
         self.read()
     }
 }
 impl YAML {
-    fn read(&mut self) -> Result<Vec<Encrypted>> {
+    fn read(&self) -> Result<Vec<Encrypted>> {
         Ok(::serde_yaml::from_str(&match ::std::fs::read_to_string(&self.path) {
             Err(err) if err.kind() == ::std::io::ErrorKind::NotFound => Ok("[]".to_string()),
             Err(err) => Err(err),
@@ -99,7 +99,7 @@ impl Backend for Folder {
         Ok(secret_f.write_all(encrypted.secret.as_bytes())?)
     }
 
-    fn load(&mut self, name: String) -> Result<Encrypted> {
+    fn load(&self, name: String) -> Result<Encrypted> {
         let salt_path = self.salt_path(&name);
         let secret_path = self.secret_path(&name);
         Ok(Encrypted{
@@ -113,7 +113,7 @@ impl Backend for Folder {
         Ok(::std::fs::remove_dir_all(self.path.join(name))?)
     }
 
-    fn list(&mut self) -> Result<Vec<Encrypted>> {
+    fn list(&self) -> Result<Vec<Encrypted>> {
         ::std::fs::read_dir(&self.path).context(
             "listing secret files"
         )?.collect::<Result<Vec<_>, _>>()?.into_iter().filter_map(|dir| {

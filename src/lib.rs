@@ -41,9 +41,9 @@ mod database;
 /// [2]: backends/struct.Folder.html
 pub trait Backend {
     fn store(&mut self, encrypted: Encrypted) -> Result<()>;
-    fn load(&mut self, name: String) -> Result<Encrypted>;
+    fn load(&self, name: String) -> Result<Encrypted>;
     fn remove(&mut self, name: String) -> Result<()>;
-    fn list(&mut self) -> Result<Vec<Encrypted>>;
+    fn list(&self) -> Result<Vec<Encrypted>>;
 }
 pub mod backends;
 
@@ -55,8 +55,8 @@ pub mod backends;
 ///
 /// [1]: encrypters/struct.Ring.html
 pub trait Encrypter {
-    fn encrypt(&mut self, secret: Secret) -> Result<Encrypted>;
-    fn decrypt(&mut self, encrypted: Encrypted) -> Result<Secret>;
+    fn encrypt(&self, secret: Secret) -> Result<Encrypted>;
+    fn decrypt(&self, encrypted: Encrypted) -> Result<Secret>;
 }
 pub mod encrypters;
 
