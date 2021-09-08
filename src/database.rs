@@ -46,7 +46,7 @@ impl Database {
     }
 
     /// Load the `name` secret.
-    pub fn load(&mut self, name: String) -> Result<Secret> {
+    pub fn load(&self, name: String) -> Result<Secret> {
         self.e
             .decrypt(self.b.load(name).context("looking up name")?)
             .context("decrypting secret")
@@ -58,7 +58,7 @@ impl Database {
     }
 
     /// List all secrets.
-    pub fn list(&mut self) -> Result<Vec<Secret>> {
+    pub fn list(&self) -> Result<Vec<Secret>> {
         self.b
             .list()
             .context("listing secrets")?
@@ -77,7 +77,7 @@ impl Database {
     ///
     /// [1]: https://crates.io/crates/tinytemplate
     /// [2]: https://docs.rs/tinytemplate/1.0.4/tinytemplate/syntax/index.html
-    pub fn template(&mut self, mut template: String) -> Result<String> {
+    pub fn template(&self, mut template: String) -> Result<String> {
         template = ::snailquote::unescape(&format!("\"{}\"", template))?;
 
         let mut tt = ::tinytemplate::TinyTemplate::new();
@@ -101,9 +101,9 @@ struct TemplateContext {
     map: ::std::collections::HashMap<String, String>,
 }
 
-impl ::std::convert::TryFrom<&mut Database> for TemplateContext {
+impl ::std::convert::TryFrom<&Database> for TemplateContext {
     type Error = Error;
-    fn try_from(db: &mut Database) -> Result<Self> {
+    fn try_from(db: &Database) -> Result<Self> {
         let secrets = db.list()?;
         Ok(Self {
             list: secrets.clone(),
