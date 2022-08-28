@@ -16,7 +16,7 @@ edition = "2018"
 anyhow = "^1"
 base64 = "^0"
 clap = { version = "^3", features = ["derive"] }
-clishe = { path = "../clishe" }
+clishe = "^0"
 paste = "^0"
 ring = "^0"
 serde = { version = "1.0", features = ["derive"] }

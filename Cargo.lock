@@ -111,7 +111,9 @@ dependencies = [
 
 [[package]]
 name = "clishe"
-version = "0.2.5"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d00367fb10d8b70a251a8fe84e09211d78f602232ae38ee1d7804768a8948d0"
 dependencies = [
  "anyhow",
  "clap",
