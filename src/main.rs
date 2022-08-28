@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 
-use ::clap::Clap;
+use ::clap::Parser;
 use ::clishe::prelude::*;
 use ::std::io::Write;
 
