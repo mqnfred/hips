@@ -14,13 +14,13 @@ edition = "2018"
 
 [dependencies]
 anyhow = "^1"
-base64 = "^0"
+base64 = "0.13"
 clap = { version = "^3", features = ["derive"] }
-clishe = "^0"
-paste = "^0"
-ring = "^0"
+clishe = "0.2"
+paste = "0.1"
+ring = "0.16"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "^1"
-serde_yaml = "^0"
-snailquote = "^0"
+serde_yaml = "^0.9"
+snailquote = "^0.3"
 tinytemplate = "^1"
